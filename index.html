@@ -73,6 +73,35 @@
   .auth-msg.ok { background: rgba(107,217,140,.1); color: var(--success); }
   .auth-back { background: none; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; padding: 8px; }
 
+  /* === 미션 배너 === */
+  .mission-banner {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(245,166,35,0.07), rgba(255,107,107,0.07), rgba(176,124,255,0.07));
+    border-bottom: 1px solid rgba(245,166,35,0.25);
+    padding: 13px 60px 13px 24px;
+    text-align: center; cursor: pointer; user-select: none;
+  }
+  .mission-banner::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 100% at 50% 50%, rgba(245,166,35,0.1) 0%, transparent 70%);
+    animation: missionPulse 5s ease-in-out infinite; pointer-events: none;
+  }
+  @keyframes missionPulse { 0%,100% { opacity: 0.4 } 50% { opacity: 1 } }
+  .mission-text {
+    font-size: 15px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.45;
+    background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    background-size: 200% auto; animation: missionShine 4s linear infinite;
+  }
+  @keyframes missionShine { 0% { background-position: 0% } 100% { background-position: 200% } }
+  .mission-edit-btn {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--muted); font-size: 14px;
+    cursor: pointer; opacity: 0; transition: opacity 0.2s; padding: 4px 6px;
+  }
+  .mission-banner:hover .mission-edit-btn { opacity: 0.7; }
+
   /* === 헤더 === */
   header.topbar {
     display: flex; align-items: center; justify-content: space-between;
@@ -629,6 +658,12 @@
     </div>
   </header>
 
+  <!-- 미션 배너 -->
+  <div class="mission-banner" id="missionBanner">
+    <div class="mission-text" id="missionText">클릭하여 팀 목표를 입력하세요 ✦</div>
+    <button class="mission-edit-btn" id="missionEditBtn" title="수정">✏️</button>
+  </div>
+
   <div class="container">
 
     <!-- 탭 -->
@@ -1039,6 +1074,7 @@ async function initApp(user) {
   await Promise.all([Storage.pull(), loadTeamBoard()]);
   initDriveClient();
   renderAll();
+  renderMission();
   if (getSavedClientId()) {
     setTimeout(() => requestDriveToken(true), 500);
   }
@@ -2350,6 +2386,62 @@ function renderAll() {
   updateFileCounts();
   renderContentSchedule();
 }
+
+/* ============================================================
+ * 미션 배너
+ * ============================================================ */
+function getMissionItem() {
+  return teamItems.find(x => x.type === 'mission');
+}
+
+function renderMission() {
+  const item = getMissionItem();
+  const el = $('#missionText');
+  if (!el) return;
+  el.textContent = item?.data?.text || '클릭하여 팀 목표를 입력하세요 ✦';
+}
+
+async function saveMission(text) {
+  const existing = getMissionItem();
+  if (existing) {
+    const ok = await updateTeamItem(existing.id, { text });
+    if (ok) renderMission();
+  } else {
+    const result = await addTeamItem('mission', { text });
+    if (result) renderMission();
+  }
+}
+
+function openMissionModal() {
+  const current = getMissionItem()?.data?.text || '';
+  openModal(`
+    <div style="padding:4px 0 12px;">
+      <h3 style="margin:0 0 6px; font-size:17px;">🔥 팀 목표</h3>
+      <p style="color:var(--muted); font-size:12px; margin:0 0 16px;">팀이 항상 바라볼 한두 문장. 짧고 강하게.</p>
+      <textarea id="missionInput" rows="3" style="width:100%; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text); font-size:15px; font-family:inherit; resize:none; line-height:1.5;">${escapeHtml(current)}</textarea>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:4px;">
+      <button class="btn-primary" id="missionSaveBtn" style="flex:1;">저장</button>
+      <button class="icon-btn" data-close style="padding:10px 16px;">취소</button>
+    </div>
+  `);
+  const input = $('#missionInput');
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  $('#missionSaveBtn').addEventListener('click', async () => {
+    const text = input.value.trim();
+    if (!text) return;
+    await saveMission(text);
+    closeModal();
+    toast('목표 저장됨 🔥');
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#missionSaveBtn').click();
+  });
+}
+
+$('#missionBanner').addEventListener('click', openMissionModal);
+$('#missionEditBtn').addEventListener('click', e => { e.stopPropagation(); openMissionModal(); });
 </script>
 </body>
 </html>
