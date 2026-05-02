@@ -1670,15 +1670,12 @@ function renderFileGrid() {
     if (!f) return;
     card.addEventListener('click', () => openFilePreview(f));
   });
-  // 썸네일 인증 토큰으로 로딩
+  // 썸네일: drive.google.com/thumbnail은 브라우저 Google 세션으로 직접 로딩 가능
   list.forEach(f => {
-    if (!f.thumbnailLink) return;
     const img = grid.querySelector(`.file-card[data-id="${f.id}"] .thumb img`);
     if (!img) return;
-    fetch(f.thumbnailLink, { headers: { Authorization: 'Bearer ' + driveAccessToken } })
-      .then(r => r.ok ? r.blob() : null)
-      .then(blob => { if (blob) img.src = URL.createObjectURL(blob); })
-      .catch(() => {});
+    img.src = `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`;
+    img.onerror = () => { img.style.display = 'none'; };
   });
 }
 
