@@ -649,8 +649,8 @@
   <header class="topbar">
     <div class="brand">🎨 WPMT Brand Vault</div>
     <div class="topbar-right">
-      <div class="drive-status" id="driveStatus" title="Google Drive 연결">
-        <span class="dot"></span><span id="driveLabel">Drive 연결</span>
+      <div class="drive-status on" id="driveStatus" title="로컬 저장소 (GoogleDrive 마운트)">
+        <span class="dot"></span><span id="driveLabel">Drive 연결됨</span>
       </div>
       <span class="sync-dot" id="syncDot"></span>
       <span class="user-email" id="userEmail"></span>
@@ -776,8 +776,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google Identity Services 제거 (로컬 API로 대체) -->
 
 <script type="importmap">
 {
@@ -797,8 +796,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const CATEGORIES = ['이미지 프롬프트', '콘텐츠 아이디어', '관련 서비스', '굿즈', 'AI ETC'];
-const DRIVE_FOLDER_NAME = 'WPMT-Brand-Vault';
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const LOCAL_API = 'http://127.0.0.1:8002';
 
 const IG_DOWNLOADER_URL = 'http://127.0.0.1:8000';
 const YT_DOWNLOADER_URL = 'http://127.0.0.1:8001';
@@ -810,7 +808,7 @@ let currentUser = null;
 let pendingEmail = '';
 
 let bookmarks = [];
-let driveFolderId = null;
+let driveFolderId = null; // 미사용 (로컬 API)
 let activeCategory = 'all';
 let activeFileFilter = 'all';
 let activeRandomType = 'all';
@@ -830,10 +828,7 @@ const FORMAT_CLASS = { '릴스': 'reels', '피드': 'feed', '스토리': 'story'
 const STATUS_LABEL = { todo: '할 일', doing: '진행 중', done: '완료' };
 const CONTENT_STATUS_LABEL = { planning: '기획', making: '제작중', done: '완료', posted: '업로드완료' };
 
-let driveAccessToken = null;
-let driveTokenExpiresAt = 0;
-let driveTokenClient = null;
-let driveFiles = []; // 캐시된 Drive 파일 목록
+let driveFiles = []; // 로컬 API 파일 목록
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -1072,246 +1067,51 @@ async function initApp(user) {
   $('#userEmail').textContent = user.email || '';
   showApp(true);
   await Promise.all([Storage.pull(), loadTeamBoard()]);
-  initDriveClient();
   renderAll();
   renderMission();
-  if (getSavedClientId()) {
-    setTimeout(() => requestDriveToken(true), 500);
-  }
+  setTimeout(() => refreshDriveFiles(), 500);
 }
 
 /* ============================================================
- * Google Drive (Google Identity Services + Drive API v3)
+ * 로컬 파일 API (rclone GoogleDrive 마운트 사용)
  * ============================================================ */
-const CLIENT_ID_KEY = 'wpmt_google_client_id';
-
-function getSavedClientId() {
-  return localStorage.getItem(CLIENT_ID_KEY) || '';
-}
-
-function promptForClientId() {
-  const cur = getSavedClientId();
-  openModal(`
-    <h3>🔑 Google OAuth Client ID 설정</h3>
-    <p style="color:var(--muted); font-size:13px; line-height:1.7;">
-      Google Drive 연결하려면 OAuth Client ID가 필요해요. 한 번만 설정하면 끝.<br/>
-      아래 안내 따라 만든 Client ID를 붙여넣어주세요.
-    </p>
-    <details style="background:var(--panel-2); border-radius:8px; padding:10px 14px; margin:12px 0; font-size:12.5px;">
-      <summary style="cursor:pointer; font-weight:700;">📖 Client ID 만드는 법 (5분)</summary>
-      <ol style="line-height:1.9; color:var(--muted); padding-left:20px; margin-top:10px;">
-        <li><a href="https://console.cloud.google.com/" target="_blank" style="color:var(--accent)">Google Cloud Console</a> 접속 (wimpmatter.studio@gmail.com 로 로그인)</li>
-        <li>상단에서 새 프로젝트 만들기 — 이름: <b>WPMT Brand Vault</b></li>
-        <li>좌측 메뉴 → <b>API 및 서비스 → 라이브러리</b> → "Google Drive API" 검색 → 사용</li>
-        <li><b>API 및 서비스 → OAuth 동의 화면</b> → 외부 → 앱 이름 <b>WPMT Brand Vault</b>, 사용자 지원 이메일 / 개발자 연락처에 본인 이메일 → 저장</li>
-        <li><b>범위</b> 단계에서 <code>.../auth/drive.file</code> 추가 → 저장</li>
-        <li><b>테스트 사용자</b>에 wimpmatter.studio@gmail.com 추가</li>
-        <li><b>API 및 서비스 → 사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID</b></li>
-        <li>애플리케이션 유형: <b>웹 애플리케이션</b></li>
-        <li>승인된 JavaScript 원본에 추가:<br/>
-          <code style="font-size:11px">${escapeHtml(window.location.origin)}</code><br/>
-          (배포 후 Vercel URL도 같은 방식으로 추가)
-        </li>
-        <li>만들기 → <b>클라이언트 ID</b> 복사 → 아래에 붙여넣기</li>
-      </ol>
-    </details>
-    <div class="input-row">
-      <label>Client ID (예: <code style="font-size:11px">xxxxxxxx.apps.googleusercontent.com</code>)</label>
-      <input id="cidInput" placeholder="xxxxxxxx.apps.googleusercontent.com" value="${escapeHtml(cur)}" />
-    </div>
-    <div class="modal-actions">
-      <button class="btn ghost" id="cidCancel">취소</button>
-      <button class="btn" id="cidSave">저장 + 연결</button>
-    </div>
-  `);
-  $('#cidCancel').addEventListener('click', closeModal);
-  $('#cidSave').addEventListener('click', () => {
-    const v = $('#cidInput').value.trim();
-    if (!v.includes('.apps.googleusercontent.com')) {
-      toast('올바른 Client ID 형식이 아니에요', 'error');
-      return;
-    }
-    localStorage.setItem(CLIENT_ID_KEY, v);
-    closeModal();
-    initDriveClient();
-    requestDriveToken(false);
-  });
-}
-
-function initDriveClient() {
-  const cid = getSavedClientId();
-  if (!cid || !window.google || !google.accounts || !google.accounts.oauth2) return;
-  driveTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: cid,
-    scope: DRIVE_SCOPE,
-    callback: (resp) => {
-      if (resp.error) {
-        console.warn('Drive auth error:', resp);
-        if (resp.error !== 'popup_closed' && resp.error !== 'access_denied') {
-          toast('Drive 인증 실패: ' + resp.error, 'error');
-        }
-        return;
-      }
-      driveAccessToken = resp.access_token;
-      driveTokenExpiresAt = Date.now() + (resp.expires_in - 60) * 1000;
-      onDriveConnected();
-    },
-  });
-}
-
-function isDriveConnected() {
-  return driveAccessToken && Date.now() < driveTokenExpiresAt;
-}
-
-function requestDriveToken(silent) {
-  if (!driveTokenClient) {
-    if (silent) return;
-    promptForClientId();
-    return;
-  }
-  driveTokenClient.requestAccessToken({ prompt: silent ? '' : 'consent' });
-}
-
-async function ensureDriveToken() {
-  if (isDriveConnected()) return true;
-  if (!driveTokenClient) {
-    promptForClientId();
-    return false;
-  }
-  return new Promise((resolve) => {
-    const orig = driveTokenClient.callback;
-    driveTokenClient.callback = (resp) => {
-      orig(resp);
-      resolve(!!resp.access_token);
-    };
-    driveTokenClient.requestAccessToken({ prompt: '' });
-  });
-}
-
-async function driveFetch(url, opts = {}) {
-  if (!await ensureDriveToken()) throw new Error('not authenticated');
-  const headers = { Authorization: 'Bearer ' + driveAccessToken, ...(opts.headers || {}) };
-  const r = await fetch(url, { ...opts, headers });
-  if (r.status === 401) {
-    driveAccessToken = null;
-    if (!await ensureDriveToken()) throw new Error('reauth failed');
-    return fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + driveAccessToken, ...(opts.headers || {}) } });
-  }
-  return r;
-}
-
-async function ensureDriveFolder() {
-  if (driveFolderId) {
-    // 검증 — 폴더가 휴지통에 있거나 사라졌는지
-    try {
-      const r = await driveFetch(`https://www.googleapis.com/drive/v3/files/${driveFolderId}?fields=id,trashed`);
-      if (r.ok) {
-        const j = await r.json();
-        if (!j.trashed) return driveFolderId;
-      }
-    } catch {}
-    driveFolderId = null;
-  }
-  // 검색
-  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  const j = await r.json();
-  if (j.files && j.files.length > 0) {
-    driveFolderId = j.files[0].id;
-  } else {
-    // 생성
-    const cr = await driveFetch('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
-    });
-    const cj = await cr.json();
-    driveFolderId = cj.id;
-  }
-  Storage.scheduleSave();
-  return driveFolderId;
-}
+function isDriveConnected() { return true; } // 항상 연결됨
 
 async function uploadFileToDrive(file, onProgress) {
-  await ensureDriveToken();
-  const folderId = await ensureDriveFolder();
-  const meta = { name: file.name, parents: [folderId] };
-  const boundary = '-------wpmt' + Math.random().toString(36).slice(2);
-  const delim = `\r\n--${boundary}\r\n`;
-  const closeDelim = `\r\n--${boundary}--`;
-
-  const head = delim
-    + 'Content-Type: application/json; charset=UTF-8\r\n\r\n'
-    + JSON.stringify(meta)
-    + delim
-    + `Content-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`;
-  // 더 간단/빠르게: resumable upload 대신 multipart 직접
-  // 큰 파일은 resumable 권장이지만 여기선 multipart로 충분
-  const bodyParts = [head, file, closeDelim];
-  const body = new Blob(bodyParts);
-
+  const fd = new FormData();
+  fd.append('file', file);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,thumbnailLink,webViewLink,createdTime');
-    xhr.setRequestHeader('Authorization', 'Bearer ' + driveAccessToken);
-    xhr.setRequestHeader('Content-Type', `multipart/related; boundary=${boundary}`);
+    xhr.open('POST', `${LOCAL_API}/api/files/upload`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error('upload failed: ' + xhr.status + ' ' + xhr.responseText));
+      else reject(new Error('upload failed: ' + xhr.status));
     };
     xhr.onerror = () => reject(new Error('upload network error'));
-    xhr.send(body);
+    xhr.send(fd);
   });
 }
 
 async function listDriveFiles() {
-  const folderId = await ensureDriveFolder();
-  const fields = 'files(id,name,mimeType,thumbnailLink,webViewLink,webContentLink,createdTime,size)';
-  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  let all = [];
-  let pageToken = null;
-  do {
-    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${encodeURIComponent(fields + ',nextPageToken')}&pageSize=200&orderBy=createdTime desc${pageToken ? `&pageToken=${pageToken}` : ''}`;
-    const r = await driveFetch(url);
-    const j = await r.json();
-    if (j.files) all.push(...j.files);
-    pageToken = j.nextPageToken;
-  } while (pageToken);
-  driveFiles = all;
-  return all;
+  const r = await fetch(`${LOCAL_API}/api/files`);
+  const j = await r.json();
+  driveFiles = j.files || [];
+  return driveFiles;
 }
 
 async function deleteDriveFile(fileId) {
-  await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE' });
+  await fetch(`${LOCAL_API}/api/files/${fileId}`, { method: 'DELETE' });
   driveFiles = driveFiles.filter(f => f.id !== fileId);
 }
 
-// 인증된 미디어 가져오기 (썸네일/미리보기)
 async function fetchDriveMediaUrl(fileId) {
-  const r = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-  if (!r.ok) return null;
-  const blob = await r.blob();
-  return URL.createObjectURL(blob);
-}
-
-async function onDriveConnected() {
-  $('#driveStatus').classList.add('on');
-  $('#driveLabel').textContent = 'Drive 연결됨';
-  toast('Drive 연결됨', 'success');
-  try {
-    await ensureDriveFolder();
-    await refreshDriveFiles();
-  } catch (e) {
-    console.error(e);
-    toast('Drive 폴더 준비 실패', 'error');
-  }
+  return `${LOCAL_API}/api/files/${fileId}/media`;
 }
 
 async function refreshDriveFiles() {
-  if (!isDriveConnected()) return;
   try {
     await listDriveFiles();
     renderFileGrid();
@@ -1322,19 +1122,13 @@ async function refreshDriveFiles() {
 }
 
 $('#driveStatus').addEventListener('click', () => {
-  if (isDriveConnected()) {
-    // 이미 연결됨 → Client ID 변경 옵션
-    promptForClientId();
-  } else {
-    if (!getSavedClientId()) promptForClientId();
-    else requestDriveToken(false);
-  }
+  refreshDriveFiles();
+  toast('파일 새로고침', 'success');
 });
 
 $('#refreshFilesBtn').addEventListener('click', () => {
-  if (!isDriveConnected()) { toast('Drive 먼저 연결해주세요', 'error'); requestDriveToken(false); return; }
   refreshDriveFiles();
-  toast('Drive 새로고침', 'success');
+  toast('새로고침', 'success');
 });
 
 /* ============================================================
@@ -1414,13 +1208,6 @@ async function handleFiles(files) {
   const accepted = files.filter(f => /^image\//.test(f.type) || /^video\//.test(f.type));
   if (accepted.length === 0) { toast('이미지 또는 영상만 업로드 가능해요', 'error'); return; }
 
-  if (!isDriveConnected()) {
-    if (!getSavedClientId()) promptForClientId();
-    else requestDriveToken(false);
-    toast('Drive 연결 후 다시 시도해주세요', 'error');
-    return;
-  }
-
   const progEl = $('#uploadProgress');
   progEl.innerHTML = '';
   for (const file of accepted) {
@@ -1471,12 +1258,6 @@ $('#rollBtn').addEventListener('click', async () => {
     if (bookmarks.length === 0) { toast('북마크가 없어요', 'error'); return; }
     const pick = bookmarks[Math.floor(Math.random() * bookmarks.length)];
     showRandomBookmark(pick);
-    return;
-  }
-  if (!isDriveConnected()) {
-    if (!getSavedClientId()) promptForClientId();
-    else requestDriveToken(false);
-    toast('Drive 먼저 연결해주세요', 'error');
     return;
   }
   if (driveFiles.length === 0) await refreshDriveFiles();
