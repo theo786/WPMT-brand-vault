@@ -364,6 +364,108 @@
     font-size: 13px; font-family: inherit;
   }
   .input-row textarea { min-height: 80px; resize: vertical; }
+
+  /* ===== 팀 보드 공통 ===== */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  }
+  .section-header h2 { margin: 0; font-size: 16px; font-weight: 700; }
+
+  /* ===== 업무 보드 ===== */
+  .task-board {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  @media (max-width: 900px) { .task-board { grid-template-columns: 1fr; } }
+  .task-col {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+    min-height: 200px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .task-col-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
+  }
+  .task-col-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .member-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .task-card {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+    cursor: pointer; transition: border-color 0.12s; position: relative;
+  }
+  .task-card:hover { border-color: var(--accent); }
+  .task-card .task-title { font-weight: 600; font-size: 13px; line-height: 1.4; word-break: break-word; }
+  .task-card .task-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .task-card .task-due { font-size: 11px; color: var(--muted); }
+  .task-card .task-note { font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+  .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+  .status-badge.todo { background: rgba(139,147,167,0.15); color: var(--muted); }
+  .status-badge.doing { background: rgba(255,180,80,0.15); color: var(--warn); }
+  .status-badge.done { background: rgba(107,217,140,0.15); color: var(--success); }
+  .task-card .card-actions { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; }
+  .task-card:hover .card-actions { display: flex; }
+  .add-task-btn {
+    width: 100%; background: none; border: 1px dashed var(--border);
+    color: var(--muted); padding: 10px; border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-family: inherit; transition: all 0.12s; margin-top: auto;
+  }
+  .add-task-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(245,166,35,0.05); }
+
+  /* ===== 콘텐츠 스케줄 ===== */
+  .schedule-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .schedule-nav .week-label { font-weight: 700; font-size: 15px; flex: 1; text-align: center; }
+  .nav-btn {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    font-family: inherit;
+  }
+  .nav-btn:hover { background: var(--panel-3); }
+  .schedule-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px;
+  }
+  @media (max-width: 1100px) { .schedule-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 600px) { .schedule-grid { grid-template-columns: repeat(2, 1fr); } }
+  .day-col {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px;
+    min-height: 120px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .day-col.today { border-color: var(--accent); }
+  .day-header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+  .day-name { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .day-date { font-size: 14px; font-weight: 700; }
+  .day-col.today .day-date { color: var(--accent); }
+  .content-card {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px; font-size: 12px;
+    cursor: pointer; transition: border-color 0.1s; display: flex; flex-direction: column; gap: 4px;
+  }
+  .content-card:hover { border-color: var(--accent); }
+  .c-format { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; align-self: flex-start; }
+  .c-format.reels { background: rgba(255,107,107,0.2); color: var(--accent-2); }
+  .c-format.feed { background: rgba(245,166,35,0.2); color: var(--accent); }
+  .c-format.story { background: rgba(176,124,255,0.2); color: var(--accent-3); }
+  .content-card .c-topic { font-weight: 600; line-height: 1.3; word-break: break-word; }
+  .content-card .c-bottom { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+  .content-card .c-assignee { font-size: 10px; }
+  .c-status { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+  .c-status.planning { background: rgba(139,147,167,0.15); color: var(--muted); }
+  .c-status.making { background: rgba(255,180,80,0.15); color: var(--warn); }
+  .c-status.done { background: rgba(107,217,140,0.15); color: var(--success); }
+  .c-status.posted { background: rgba(245,166,35,0.2); color: var(--accent); }
+  .add-day-btn {
+    background: none; border: 1px dashed var(--border); color: var(--muted);
+    border-radius: 6px; padding: 5px; cursor: pointer; font-size: 16px;
+    line-height: 1; transition: all 0.1s; margin-top: auto; width: 100%; font-family: inherit;
+  }
+  .add-day-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* 멤버 컬러 */
+  .m-0 { color: #f5a623; }
+  .m-1 { color: #ff6b6b; }
+  .m-2 { color: #b07cff; }
+  .dot-0 { background: #f5a623; }
+  .dot-1 { background: #ff6b6b; }
+  .dot-2 { background: #b07cff; }
 </style>
 </head>
 <body>
@@ -461,8 +563,10 @@
 
     <!-- 탭 -->
     <div class="tabs">
-      <button data-tab="bookmarks" class="active">북마크</button>
-      <button data-tab="files">파일 보관함 <span id="fileCount" style="opacity:0.6">(0)</span></button>
+      <button data-tab="bookmarks" class="active">🔗 레퍼런스</button>
+      <button data-tab="files">📂 파일 보관함 <span id="fileCount" style="opacity:0.6">(0)</span></button>
+      <button data-tab="tasks">✅ 업무</button>
+      <button data-tab="schedule">📅 콘텐츠 스케줄</button>
     </div>
 
     <!-- 북마크 뷰 -->
@@ -480,6 +584,28 @@
         <button class="icon-btn" id="refreshFilesBtn" style="margin-left:auto">↻ 새로고침</button>
       </div>
       <div class="file-grid" id="fileGrid"></div>
+    </section>
+
+    <!-- 업무 뷰 -->
+    <section id="tasksView" style="display:none">
+      <div class="section-header">
+        <h2>✅ 업무 분배</h2>
+      </div>
+      <div class="task-board" id="taskBoard"></div>
+    </section>
+
+    <!-- 콘텐츠 스케줄 뷰 -->
+    <section id="scheduleView" style="display:none">
+      <div class="section-header">
+        <h2>📅 콘텐츠 스케줄</h2>
+        <button class="btn-primary" id="addContentBtn">+ 추가</button>
+      </div>
+      <div class="schedule-nav">
+        <button class="nav-btn" id="prevWeekBtn">← 이전</button>
+        <div class="week-label" id="weekLabel"></div>
+        <button class="nav-btn" id="nextWeekBtn">다음 →</button>
+      </div>
+      <div class="schedule-grid" id="scheduleGrid"></div>
     </section>
 
   </div>
@@ -532,6 +658,19 @@ let activeCategory = 'all';
 let activeFileFilter = 'all';
 let activeRandomType = 'all';
 let activeTab = 'bookmarks';
+
+let teamItems = [];
+let scheduleWeekOffset = 0;
+
+const MEMBERS = [
+  { name: '이태호', nick: '타이거미어캣' },
+  { name: '박수빈', nick: '엠티 워터멜론' },
+  { name: '김지아', nick: '쟈' }
+];
+const DAY_NAMES = ['월', '화', '수', '목', '금', '토', '일'];
+const FORMAT_CLASS = { '릴스': 'reels', '피드': 'feed', '스토리': 'story' };
+const STATUS_LABEL = { todo: '할 일', doing: '진행 중', done: '완료' };
+const CONTENT_STATUS_LABEL = { planning: '기획', making: '제작중', done: '완료', posted: '업로드완료' };
 
 let driveAccessToken = null;
 let driveTokenExpiresAt = 0;
@@ -773,10 +912,9 @@ async function initApp(user) {
   currentUser = user;
   $('#userEmail').textContent = user.email || '';
   showApp(true);
-  await Storage.pull();
+  await Promise.all([Storage.pull(), loadTeamBoard()]);
   initDriveClient();
   renderAll();
-  // 자동 silent 인증 시도
   if (getSavedClientId()) {
     setTimeout(() => requestDriveToken(true), 500);
   }
@@ -1437,11 +1575,19 @@ $$('.tabs button').forEach(b => {
     activeTab = b.dataset.tab;
     $('#bookmarksView').style.display = activeTab === 'bookmarks' ? 'block' : 'none';
     $('#filesView').style.display = activeTab === 'files' ? 'block' : 'none';
+    $('#tasksView').style.display = activeTab === 'tasks' ? 'block' : 'none';
+    $('#scheduleView').style.display = activeTab === 'schedule' ? 'block' : 'none';
     if (activeTab === 'files' && isDriveConnected() && driveFiles.length === 0) {
       refreshDriveFiles();
     }
+    if (activeTab === 'tasks') renderTasks();
+    if (activeTab === 'schedule') renderContentSchedule();
   });
 });
+
+$('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
+$('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
+$('#addContentBtn').addEventListener('click', () => openContentModal(null, fmtDate(new Date())));
 
 document.addEventListener('click', (e) => {
   const ftBtn = e.target.closest('[data-ft]');
@@ -1545,6 +1691,307 @@ async function openYtDownloader(url) {
   `);
   $('#ytNew').addEventListener('click', () => window.open(target, '_blank'));
   $('[data-close]').addEventListener('click', closeModal);
+}
+
+/* ============================================================
+ * 팀 보드 — Supabase CRUD
+ * ============================================================ */
+async function loadTeamBoard() {
+  const { data, error } = await supabase
+    .from('wpmt_team_board')
+    .select('id, type, data, created_at')
+    .order('created_at', { ascending: true });
+  if (error) { console.error('team board load error', error); return; }
+  teamItems = data || [];
+}
+
+async function addTeamItem(type, itemData) {
+  const { data, error } = await supabase
+    .from('wpmt_team_board')
+    .insert({ type, data: itemData, created_by: currentUser.id })
+    .select().single();
+  if (error) { toast('오류: ' + error.message, 'error'); return null; }
+  teamItems.push(data);
+  return data;
+}
+
+async function updateTeamItem(id, itemData) {
+  const { error } = await supabase
+    .from('wpmt_team_board')
+    .update({ data: itemData, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) { toast('오류: ' + error.message, 'error'); return false; }
+  const idx = teamItems.findIndex(x => x.id === id);
+  if (idx >= 0) teamItems[idx].data = itemData;
+  return true;
+}
+
+async function deleteTeamItem(id) {
+  const { error } = await supabase.from('wpmt_team_board').delete().eq('id', id);
+  if (error) { toast('오류: ' + error.message, 'error'); return false; }
+  teamItems = teamItems.filter(x => x.id !== id);
+  return true;
+}
+
+/* ============================================================
+ * 업무 보드 렌더
+ * ============================================================ */
+function renderTasks() {
+  const board = $('#taskBoard');
+  if (!board) return;
+  const tasks = teamItems.filter(x => x.type === 'task');
+  board.innerHTML = MEMBERS.map((m, mi) => {
+    const myTasks = tasks.filter(t => t.data.assignee === m.name);
+    const cardsHtml = myTasks.map(t => {
+      const d = t.data;
+      return `
+        <div class="task-card" data-id="${t.id}">
+          <div class="task-title">${escapeHtml(d.title)}</div>
+          <div class="task-meta">
+            <span class="status-badge ${d.status}">${STATUS_LABEL[d.status] || d.status}</span>
+            ${d.due ? `<span class="task-due">📅 ${d.due}</span>` : ''}
+          </div>
+          ${d.note ? `<div class="task-note">${escapeHtml(d.note)}</div>` : ''}
+          <div class="card-actions">
+            <button class="icon-btn" data-act="edit-task" data-id="${t.id}" style="padding:3px 8px;font-size:11px;">✏️</button>
+            <button class="icon-btn" data-act="del-task" data-id="${t.id}" style="padding:3px 8px;font-size:11px;color:var(--danger);">×</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="task-col">
+        <div class="task-col-header">
+          <div class="task-col-title">
+            <span class="member-dot dot-${mi}"></span>
+            <span>${escapeHtml(m.nick)}</span>
+          </div>
+          <span style="font-size:11px;color:var(--muted);">${myTasks.length}개</span>
+        </div>
+        ${cardsHtml || '<div style="color:var(--muted);font-size:12px;padding:4px 0;">업무 없음</div>'}
+        <button class="add-task-btn" data-act="add-task" data-member="${m.name}">+ 업무 추가</button>
+      </div>`;
+  }).join('');
+  wireTaskEvents();
+}
+
+function wireTaskEvents() {
+  $$('[data-act="add-task"]').forEach(btn =>
+    btn.addEventListener('click', () => openTaskModal(null, btn.dataset.member))
+  );
+  $$('[data-act="edit-task"]').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (item) openTaskModal(item);
+    })
+  );
+  $$('[data-act="del-task"]').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm('삭제할까요?')) return;
+      await deleteTeamItem(btn.dataset.id);
+      renderTasks();
+      toast('삭제됨');
+    })
+  );
+}
+
+function openTaskModal(item, defaultMember) {
+  const d = item ? item.data : {};
+  const isEdit = !!item;
+  openModal(`
+    <h3>${isEdit ? '✏️ 업무 수정' : '✅ 업무 추가'}</h3>
+    <div class="input-row">
+      <label>담당자</label>
+      <select id="t-assignee">
+        ${MEMBERS.map(m => `<option value="${m.name}" ${(d.assignee||defaultMember)===m.name?'selected':''}>${m.nick} (${m.name})</option>`).join('')}
+      </select>
+    </div>
+    <div class="input-row">
+      <label>업무 제목</label>
+      <input id="t-title" placeholder="예: 릴스 썸네일 디자인" value="${escapeHtml(d.title||'')}" />
+    </div>
+    <div class="input-row">
+      <label>상태</label>
+      <select id="t-status">
+        <option value="todo" ${(d.status||'todo')==='todo'?'selected':''}>할 일</option>
+        <option value="doing" ${d.status==='doing'?'selected':''}>진행 중</option>
+        <option value="done" ${d.status==='done'?'selected':''}>완료</option>
+      </select>
+    </div>
+    <div class="input-row">
+      <label>마감일 (선택)</label>
+      <input type="date" id="t-due" value="${d.due||''}" />
+    </div>
+    <div class="input-row">
+      <label>메모 (선택)</label>
+      <textarea id="t-note" placeholder="추가 내용...">${escapeHtml(d.note||'')}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-close>취소</button>
+      <button class="btn" id="t-save">${isEdit ? '저장' : '추가'}</button>
+    </div>
+  `);
+  $('[data-close]').addEventListener('click', closeModal);
+  $('#t-save').addEventListener('click', async () => {
+    const title = $('#t-title').value.trim();
+    if (!title) { toast('제목을 입력하세요', 'error'); return; }
+    const itemData = {
+      title, assignee: $('#t-assignee').value,
+      status: $('#t-status').value,
+      due: $('#t-due').value || null,
+      note: $('#t-note').value.trim()
+    };
+    $('#t-save').disabled = true;
+    if (isEdit) await updateTeamItem(item.id, itemData);
+    else await addTeamItem('task', itemData);
+    closeModal();
+    renderTasks();
+    toast(isEdit ? '수정됨!' : '업무 추가됨!', 'success');
+  });
+}
+
+/* ============================================================
+ * 콘텐츠 스케줄 렌더
+ * ============================================================ */
+function getWeekDates(offset) {
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function renderContentSchedule() {
+  const grid = $('#scheduleGrid');
+  const weekLabel = $('#weekLabel');
+  if (!grid || !weekLabel) return;
+  const dates = getWeekDates(scheduleWeekOffset);
+  const todayStr = fmtDate(new Date());
+  const first = dates[0], last = dates[6];
+  weekLabel.textContent = `${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일`;
+  const contents = teamItems.filter(x => x.type === 'content');
+  grid.innerHTML = dates.map((d, di) => {
+    const dateStr = fmtDate(d);
+    const dayItems = contents.filter(c => c.data.date === dateStr);
+    const cards = dayItems.map(c => {
+      const cd = c.data;
+      const fmtCls = FORMAT_CLASS[cd.format] || 'feed';
+      const mi = MEMBERS.findIndex(m => m.name === cd.assignee);
+      return `
+        <div class="content-card" data-id="${c.id}">
+          <span class="c-format ${fmtCls}">${escapeHtml(cd.format)}</span>
+          <div class="c-topic">${escapeHtml(cd.topic)}</div>
+          <div class="c-bottom">
+            <span class="c-assignee ${mi>=0?'m-'+mi:''}">${escapeHtml(mi>=0?MEMBERS[mi].nick:cd.assignee)}</span>
+            <span class="c-status ${cd.status}">${CONTENT_STATUS_LABEL[cd.status]||cd.status}</span>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="day-col ${dateStr===todayStr?'today':''}">
+        <div class="day-header">
+          <div class="day-name">${DAY_NAMES[di]}</div>
+          <div class="day-date">${d.getDate()}</div>
+        </div>
+        ${cards}
+        <button class="add-day-btn" data-act="add-content" data-date="${dateStr}" title="추가">+</button>
+      </div>`;
+  }).join('');
+  wireScheduleEvents();
+}
+
+function wireScheduleEvents() {
+  $$('[data-act="add-content"]').forEach(btn =>
+    btn.addEventListener('click', () => openContentModal(null, btn.dataset.date))
+  );
+  $$('.content-card').forEach(card =>
+    card.addEventListener('click', () => {
+      const item = teamItems.find(x => x.id === card.dataset.id);
+      if (item) openContentModal(item);
+    })
+  );
+}
+
+function openContentModal(item, defaultDate) {
+  const d = item ? item.data : {};
+  const isEdit = !!item;
+  openModal(`
+    <h3>${isEdit ? '✏️ 콘텐츠 수정' : '📅 콘텐츠 추가'}</h3>
+    <div class="input-row">
+      <label>날짜</label>
+      <input type="date" id="c-date" value="${d.date || defaultDate || fmtDate(new Date())}" />
+    </div>
+    <div class="input-row">
+      <label>형식</label>
+      <select id="c-format">
+        <option value="릴스" ${(d.format||'릴스')==='릴스'?'selected':''}>릴스</option>
+        <option value="피드" ${d.format==='피드'?'selected':''}>피드</option>
+        <option value="스토리" ${d.format==='스토리'?'selected':''}>스토리</option>
+      </select>
+    </div>
+    <div class="input-row">
+      <label>주제 / 제목</label>
+      <input id="c-topic" placeholder="예: AI 사진관 소개 릴스" value="${escapeHtml(d.topic||'')}" />
+    </div>
+    <div class="input-row">
+      <label>담당자</label>
+      <select id="c-assignee">
+        ${MEMBERS.map(m => `<option value="${m.name}" ${d.assignee===m.name?'selected':''}>${m.nick} (${m.name})</option>`).join('')}
+      </select>
+    </div>
+    <div class="input-row">
+      <label>상태</label>
+      <select id="c-status">
+        <option value="planning" ${(d.status||'planning')==='planning'?'selected':''}>기획</option>
+        <option value="making" ${d.status==='making'?'selected':''}>제작중</option>
+        <option value="done" ${d.status==='done'?'selected':''}>완료</option>
+        <option value="posted" ${d.status==='posted'?'selected':''}>업로드완료</option>
+      </select>
+    </div>
+    <div class="input-row">
+      <label>메모 (선택)</label>
+      <textarea id="c-note" placeholder="캡션 초안, 레퍼런스 링크 등...">${escapeHtml(d.note||'')}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-close>취소</button>
+      ${isEdit ? `<button class="btn" id="c-del" style="background:var(--danger);color:#fff;margin-right:auto;">삭제</button>` : ''}
+      <button class="btn" id="c-save">${isEdit ? '저장' : '추가'}</button>
+    </div>
+  `);
+  $('[data-close]').addEventListener('click', closeModal);
+  if (isEdit) {
+    $('#c-del').addEventListener('click', async () => {
+      if (!confirm('삭제할까요?')) return;
+      await deleteTeamItem(item.id);
+      closeModal();
+      renderContentSchedule();
+      toast('삭제됨');
+    });
+  }
+  $('#c-save').addEventListener('click', async () => {
+    const topic = $('#c-topic').value.trim();
+    if (!topic) { toast('주제를 입력하세요', 'error'); return; }
+    const itemData = {
+      date: $('#c-date').value, format: $('#c-format').value,
+      topic, assignee: $('#c-assignee').value,
+      status: $('#c-status').value, note: $('#c-note').value.trim()
+    };
+    $('#c-save').disabled = true;
+    if (isEdit) await updateTeamItem(item.id, itemData);
+    else await addTeamItem('content', itemData);
+    closeModal();
+    renderContentSchedule();
+    toast(isEdit ? '수정됨!' : '추가됨!', 'success');
+  });
 }
 
 /* ============================================================
