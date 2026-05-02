@@ -466,6 +466,104 @@
   .dot-0 { background: #f5a623; }
   .dot-1 { background: #ff6b6b; }
   .dot-2 { background: #b07cff; }
+
+  /* 마감일 탭 */
+  .due-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .due-tab {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted); padding: 6px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.12s;
+  }
+  .due-tab.active { background: var(--accent); color: #181014; border-color: var(--accent); font-weight: 700; }
+  .due-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  /* 대주제 탭 */
+  .cat-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .cat-tab {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted); padding: 8px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit;
+    text-align: center; transition: all 0.12s;
+  }
+  .cat-tab.active { font-weight: 700; }
+  .cat-tab.active.ops  { background: rgba(79,182,255,0.15); color: #4fb6ff; border-color: #4fb6ff; }
+  .cat-tab.active.cont { background: rgba(255,107,107,0.15); color: var(--accent-2); border-color: var(--accent-2); }
+  .cat-tab.active.goods { background: rgba(107,217,140,0.15); color: var(--success); border-color: var(--success); }
+
+  /* 스케줄 카드 status 추가 */
+  .c-status.todo  { background: rgba(139,147,167,0.15); color: var(--muted); }
+  .c-status.doing { background: rgba(255,180,80,0.15);  color: var(--warn); }
+  .c-format.ops   { background: rgba(79,182,255,0.15);  color: #4fb6ff; }
+  .c-format.goods { background: rgba(107,217,140,0.15); color: var(--success); }
+  .c-format.task  { background: rgba(139,147,167,0.12); color: var(--muted); }
+
+  /* ===== 서브탭 ===== */
+  .sub-tabs {
+    display: flex; gap: 4px; margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sub-tabs button {
+    background: none; border: 0; color: var(--muted);
+    padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    border-bottom: 2px solid transparent; font-family: inherit; margin-bottom: -1px;
+  }
+  .sub-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .sub-tabs button:hover { color: var(--text); }
+
+  /* ===== 파일 그리드 (1:1 피드) ===== */
+  .file-grid {
+    display: grid; gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  .file-card {
+    aspect-ratio: 1; position: relative;
+    border-radius: 10px; overflow: hidden; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--border);
+    transition: border-color 0.12s;
+  }
+  .file-card:hover { border-color: var(--accent); }
+  .file-card .thumb { width: 100%; height: 100%; position: relative; }
+  .file-card .thumb img,
+  .file-card .thumb video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .file-card .thumb .ico { font-size: 36px; display: flex; align-items: center; justify-content: center; height: 100%; }
+  .file-card .name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 6px 8px; font-size: 11px; line-height: 1.3;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .file-card .badge {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.55); padding: 2px 6px; border-radius: 4px; font-size: 10px;
+  }
+  .file-card .video-mark {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(0,0,0,0.5); border-radius: 50%; width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;
+  }
+
+  /* ===== 회의록 ===== */
+  .minute-list { display: flex; flex-direction: column; gap: 12px; }
+  .minute-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+    cursor: pointer; transition: border-color 0.12s;
+  }
+  .minute-card:hover { border-color: var(--accent); }
+  .minute-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .minute-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .minute-title { font-weight: 700; font-size: 15px; flex: 1; }
+  .minute-attendees { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .minute-attendee {
+    font-size: 11px; padding: 2px 9px; border-radius: 6px;
+    background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .minute-preview {
+    color: var(--muted); font-size: 12px; line-height: 1.5;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
 </style>
 </head>
 <body>
@@ -668,7 +766,8 @@ let driveFolderId = null;
 let activeCategory = 'all';
 let activeFileFilter = 'all';
 let activeRandomType = 'all';
-let activeTab = 'bookmarks';
+let activeTab = 'schedule';
+let activeSubTab = 'bookmarks';
 
 let teamItems = [];
 let scheduleWeekOffset = 0;
@@ -905,6 +1004,7 @@ function showApp(on) {
 }
 
 supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return;
   if (session?.user) {
     if (!currentUser || currentUser.id !== session.user.id) initApp(session.user);
   } else {
@@ -1579,26 +1679,38 @@ async function openFilePreview(f) {
 /* ============================================================
  * 탭 전환
  * ============================================================ */
-$$('.tabs button').forEach(b => {
+function switchTab(tab) {
+  $$('.tabs button').forEach(x => x.classList.remove('active'));
+  const btn = document.querySelector(`.tabs button[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+  activeTab = tab;
+  $('#scheduleView').style.display  = tab === 'schedule'  ? 'block' : 'none';
+  $('#tasksView').style.display     = tab === 'tasks'     ? 'block' : 'none';
+  $('#minutesView').style.display   = tab === 'minutes'   ? 'block' : 'none';
+  $('#referenceView').style.display = tab === 'reference' ? 'block' : 'none';
+  if (tab === 'schedule')  renderContentSchedule();
+  if (tab === 'tasks')     renderTasks();
+  if (tab === 'minutes')   renderMinutes();
+  if (tab === 'reference' && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
+}
+
+$$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+$$('.sub-tabs button').forEach(b => {
   b.addEventListener('click', () => {
-    $$('.tabs button').forEach(x => x.classList.remove('active'));
+    $$('.sub-tabs button').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
-    activeTab = b.dataset.tab;
-    $('#bookmarksView').style.display = activeTab === 'bookmarks' ? 'block' : 'none';
-    $('#filesView').style.display = activeTab === 'files' ? 'block' : 'none';
-    $('#tasksView').style.display = activeTab === 'tasks' ? 'block' : 'none';
-    $('#scheduleView').style.display = activeTab === 'schedule' ? 'block' : 'none';
-    if (activeTab === 'files' && isDriveConnected() && driveFiles.length === 0) {
-      refreshDriveFiles();
-    }
-    if (activeTab === 'tasks') renderTasks();
-    if (activeTab === 'schedule') renderContentSchedule();
+    activeSubTab = b.dataset.subtab;
+    $('#bookmarksView').style.display = activeSubTab === 'bookmarks' ? 'block' : 'none';
+    $('#filesView').style.display     = activeSubTab === 'files'     ? 'block' : 'none';
+    if (activeSubTab === 'files' && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
   });
 });
 
 $('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
 $('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
 $('#addContentBtn').addEventListener('click', () => openContentModal(null, fmtDate(new Date())));
+$('#addMinuteBtn').addEventListener('click', () => openMinuteModal(null));
 
 document.addEventListener('click', (e) => {
   const ftBtn = e.target.closest('[data-ft]');
@@ -1831,8 +1943,16 @@ function openTaskModal(item, defaultMember) {
       </select>
     </div>
     <div class="input-row">
-      <label>마감일 (선택)</label>
-      <input type="date" id="t-due" value="${d.due||''}" />
+      <label>마감일</label>
+      <div class="due-tabs" style="margin-bottom:8px;">
+        <button class="due-tab ${d.due?'':'active'}" data-days="none">없음</button>
+        <button class="due-tab" data-days="3">3일</button>
+        <button class="due-tab" data-days="5">5일</button>
+        <button class="due-tab" data-days="7">7일</button>
+        <button class="due-tab" data-days="14">14일</button>
+        <button class="due-tab ${d.due?'active':''}" data-days="custom">직접입력</button>
+      </div>
+      <input type="date" id="t-due" value="${d.due||''}" style="${d.due?'':'display:none'}" />
     </div>
     <div class="input-row">
       <label>메모 (선택)</label>
@@ -1844,6 +1964,27 @@ function openTaskModal(item, defaultMember) {
     </div>
   `);
   $('[data-close]').addEventListener('click', closeModal);
+
+  const today = fmtDate(new Date());
+  $$('#modal .due-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#modal .due-tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      if (btn.dataset.days === 'none') {
+        $('#t-due').style.display = 'none';
+        $('#t-due').value = '';
+      } else if (btn.dataset.days === 'custom') {
+        $('#t-due').style.display = 'block';
+        if (!$('#t-due').value) $('#t-due').value = today;
+      } else {
+        const dt = new Date();
+        dt.setDate(dt.getDate() + parseInt(btn.dataset.days));
+        $('#t-due').style.display = 'none';
+        $('#t-due').value = fmtDate(dt);
+      }
+    });
+  });
+
   $('#t-save').addEventListener('click', async () => {
     const title = $('#t-title').value.trim();
     if (!title) { toast('제목을 입력하세요', 'error'); return; }
@@ -1858,6 +1999,7 @@ function openTaskModal(item, defaultMember) {
     else await addTeamItem('task', itemData);
     closeModal();
     renderTasks();
+    if (activeTab === 'schedule') renderContentSchedule();
     toast(isEdit ? '수정됨!' : '업무 추가됨!', 'success');
   });
 }
@@ -1869,8 +2011,8 @@ function getWeekDates(offset) {
   const today = new Date();
   const dow = today.getDay();
   const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
-  return Array.from({ length: 7 }, (_, i) => {
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 14);
+  return Array.from({ length: 14 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     return d;
@@ -1881,36 +2023,68 @@ function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+const CAT_FORMAT_CLASS = { '콘텐츠': FORMAT_CLASS, '운영': {}, '굿즈': {} };
+const CAT_COLORS = { '콘텐츠': 'accent-2', '운영': 'ops', '굿즈': 'goods' };
+
+function scheduleCardHtml(item) {
+  const cd = item.data;
+  const isContent = !cd.category || cd.category === '콘텐츠';
+  const isOps   = cd.category === '운영';
+  const isGoods = cd.category === '굿즈';
+  const mi = MEMBERS.findIndex(m => m.name === cd.assignee);
+  let fmtLabel, fmtCls;
+  if (isContent) { fmtLabel = cd.format || '콘텐츠'; fmtCls = FORMAT_CLASS[cd.format] || 'feed'; }
+  else if (isOps) { fmtLabel = '운영'; fmtCls = 'ops'; }
+  else { fmtLabel = '굿즈'; fmtCls = 'goods'; }
+  const statusKey = cd.status || 'planning';
+  return `
+    <div class="content-card" data-id="${item.id}">
+      <span class="c-format ${fmtCls}">${escapeHtml(fmtLabel)}</span>
+      <div class="c-topic">${escapeHtml(cd.topic)}</div>
+      <div class="c-bottom">
+        <span class="c-assignee ${mi>=0?'m-'+mi:''}">${escapeHtml(mi>=0?MEMBERS[mi].nick:(cd.assignee||''))}</span>
+        <span class="c-status ${statusKey}">${CONTENT_STATUS_LABEL[statusKey]||statusKey}</span>
+      </div>
+    </div>`;
+}
+
+function taskScheduleCardHtml(item) {
+  const td = item.data;
+  const mi = MEMBERS.findIndex(m => m.name === td.assignee);
+  const st = td.status || 'todo';
+  return `
+    <div class="content-card" data-taskid="${item.id}" style="border-left:3px solid ${['#f5a623','#ff6b6b','#b07cff'][mi]||'#8b93a7'}">
+      <span class="c-format task">✅ 업무</span>
+      <div class="c-topic">${escapeHtml(td.title)}</div>
+      <div class="c-bottom">
+        <span class="c-assignee ${mi>=0?'m-'+mi:''}">${escapeHtml(mi>=0?MEMBERS[mi].nick:(td.assignee||''))}</span>
+        <span class="c-status ${st}">${STATUS_LABEL[st]||st}</span>
+      </div>
+    </div>`;
+}
+
 function renderContentSchedule() {
   const grid = $('#scheduleGrid');
   const weekLabel = $('#weekLabel');
   if (!grid || !weekLabel) return;
   const dates = getWeekDates(scheduleWeekOffset);
   const todayStr = fmtDate(new Date());
-  const first = dates[0], last = dates[6];
+  const first = dates[0], last = dates[13];
   weekLabel.textContent = `${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일`;
   const contents = teamItems.filter(x => x.type === 'content');
+  const tasks = teamItems.filter(x => x.type === 'task' && x.data.due);
   grid.innerHTML = dates.map((d, di) => {
     const dateStr = fmtDate(d);
-    const dayItems = contents.filter(c => c.data.date === dateStr);
-    const cards = dayItems.map(c => {
-      const cd = c.data;
-      const fmtCls = FORMAT_CLASS[cd.format] || 'feed';
-      const mi = MEMBERS.findIndex(m => m.name === cd.assignee);
-      return `
-        <div class="content-card" data-id="${c.id}">
-          <span class="c-format ${fmtCls}">${escapeHtml(cd.format)}</span>
-          <div class="c-topic">${escapeHtml(cd.topic)}</div>
-          <div class="c-bottom">
-            <span class="c-assignee ${mi>=0?'m-'+mi:''}">${escapeHtml(mi>=0?MEMBERS[mi].nick:cd.assignee)}</span>
-            <span class="c-status ${cd.status}">${CONTENT_STATUS_LABEL[cd.status]||cd.status}</span>
-          </div>
-        </div>`;
-    }).join('');
+    const dayContents = contents.filter(c => c.data.date === dateStr);
+    const dayTasks   = tasks.filter(t => t.data.due === dateStr);
+    const cards = [
+      ...dayContents.map(c => scheduleCardHtml(c)),
+      ...dayTasks.map(t => taskScheduleCardHtml(t))
+    ].join('');
     return `
       <div class="day-col ${dateStr===todayStr?'today':''}">
         <div class="day-header">
-          <div class="day-name">${DAY_NAMES[di]}</div>
+          <div class="day-name">${DAY_NAMES[di % 7]}</div>
           <div class="day-date">${d.getDate()}</div>
         </div>
         ${cards}
@@ -1924,10 +2098,16 @@ function wireScheduleEvents() {
   $$('[data-act="add-content"]').forEach(btn =>
     btn.addEventListener('click', () => openContentModal(null, btn.dataset.date))
   );
-  $$('.content-card').forEach(card =>
+  $$('.content-card[data-id]').forEach(card =>
     card.addEventListener('click', () => {
       const item = teamItems.find(x => x.id === card.dataset.id);
       if (item) openContentModal(item);
+    })
+  );
+  $$('.content-card[data-taskid]').forEach(card =>
+    card.addEventListener('click', () => {
+      const item = teamItems.find(x => x.id === card.dataset.taskid);
+      if (item) openTaskModal(item);
     })
   );
 }
@@ -1935,23 +2115,34 @@ function wireScheduleEvents() {
 function openContentModal(item, defaultDate) {
   const d = item ? item.data : {};
   const isEdit = !!item;
+  const initCat = d.category || '콘텐츠';
   openModal(`
-    <h3>${isEdit ? '✏️ 콘텐츠 수정' : '📅 콘텐츠 추가'}</h3>
+    <h3>${isEdit ? '✏️ 일정 수정' : '📅 일정 추가'}</h3>
     <div class="input-row">
       <label>날짜</label>
       <input type="date" id="c-date" value="${d.date || defaultDate || fmtDate(new Date())}" />
     </div>
     <div class="input-row">
-      <label>형식</label>
-      <select id="c-format">
-        <option value="릴스" ${(d.format||'릴스')==='릴스'?'selected':''}>릴스</option>
-        <option value="피드" ${d.format==='피드'?'selected':''}>피드</option>
-        <option value="스토리" ${d.format==='스토리'?'selected':''}>스토리</option>
-      </select>
+      <label>대주제</label>
+      <div class="cat-tabs">
+        <button class="cat-tab cont ${initCat==='콘텐츠'?'active':''}" data-cat="콘텐츠">콘텐츠</button>
+        <button class="cat-tab ops  ${initCat==='운영'?'active':''}"  data-cat="운영">운영</button>
+        <button class="cat-tab goods ${initCat==='굿즈'?'active':''}" data-cat="굿즈">굿즈</button>
+      </div>
+    </div>
+    <div id="c-cont-fields" style="${initCat!=='콘텐츠'?'display:none':''}">
+      <div class="input-row">
+        <label>형식</label>
+        <select id="c-format">
+          <option value="피드"  ${(d.format||'피드')==='피드'?'selected':''}>피드</option>
+          <option value="릴스"  ${d.format==='릴스'?'selected':''}>릴스</option>
+          <option value="쓰레드" ${d.format==='쓰레드'?'selected':''}>쓰레드</option>
+        </select>
+      </div>
     </div>
     <div class="input-row">
-      <label>주제 / 제목</label>
-      <input id="c-topic" placeholder="예: AI 사진관 소개 릴스" value="${escapeHtml(d.topic||'')}" />
+      <label id="c-topic-label">${initCat==='콘텐츠'?'주제 / 제목':'내용'}</label>
+      <input id="c-topic" placeholder="${initCat==='콘텐츠'?'예: AI 사진관 소개 릴스':'예: 인스타 DM 답장, 굿즈 발주 확인'}" value="${escapeHtml(d.topic||'')}" />
     </div>
     <div class="input-row">
       <label>담당자</label>
@@ -1963,14 +2154,14 @@ function openContentModal(item, defaultDate) {
       <label>상태</label>
       <select id="c-status">
         <option value="planning" ${(d.status||'planning')==='planning'?'selected':''}>기획</option>
-        <option value="making" ${d.status==='making'?'selected':''}>제작중</option>
-        <option value="done" ${d.status==='done'?'selected':''}>완료</option>
-        <option value="posted" ${d.status==='posted'?'selected':''}>업로드완료</option>
+        <option value="making"   ${d.status==='making'?'selected':''}>제작중</option>
+        <option value="done"     ${d.status==='done'?'selected':''}>완료</option>
+        <option value="posted"   ${d.status==='posted'?'selected':''}>업로드완료</option>
       </select>
     </div>
     <div class="input-row">
       <label>메모 (선택)</label>
-      <textarea id="c-note" placeholder="캡션 초안, 레퍼런스 링크 등...">${escapeHtml(d.note||'')}</textarea>
+      <textarea id="c-note" placeholder="추가 메모...">${escapeHtml(d.note||'')}</textarea>
     </div>
     <div class="modal-actions">
       <button class="btn ghost" data-close>취소</button>
@@ -1978,30 +2169,138 @@ function openContentModal(item, defaultDate) {
       <button class="btn" id="c-save">${isEdit ? '저장' : '추가'}</button>
     </div>
   `);
+  let selectedCat = initCat;
+  $$('#modal .cat-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#modal .cat-tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCat = btn.dataset.cat;
+      $('#c-cont-fields').style.display = selectedCat === '콘텐츠' ? '' : 'none';
+      $('#c-topic-label').textContent = selectedCat === '콘텐츠' ? '주제 / 제목' : '내용';
+      $('#c-topic').placeholder = selectedCat === '콘텐츠' ? '예: AI 사진관 소개 릴스' : '예: 인스타 DM 답장, 굿즈 발주 확인';
+    });
+  });
   $('[data-close]').addEventListener('click', closeModal);
   if (isEdit) {
     $('#c-del').addEventListener('click', async () => {
       if (!confirm('삭제할까요?')) return;
       await deleteTeamItem(item.id);
-      closeModal();
-      renderContentSchedule();
-      toast('삭제됨');
+      closeModal(); renderContentSchedule(); toast('삭제됨');
     });
   }
   $('#c-save').addEventListener('click', async () => {
     const topic = $('#c-topic').value.trim();
-    if (!topic) { toast('주제를 입력하세요', 'error'); return; }
+    if (!topic) { toast('내용을 입력하세요', 'error'); return; }
     const itemData = {
-      date: $('#c-date').value, format: $('#c-format').value,
+      date: $('#c-date').value,
+      category: selectedCat,
+      format: selectedCat === '콘텐츠' ? ($('#c-format')?.value || '피드') : null,
       topic, assignee: $('#c-assignee').value,
       status: $('#c-status').value, note: $('#c-note').value.trim()
     };
     $('#c-save').disabled = true;
     if (isEdit) await updateTeamItem(item.id, itemData);
     else await addTeamItem('content', itemData);
-    closeModal();
-    renderContentSchedule();
+    closeModal(); renderContentSchedule();
     toast(isEdit ? '수정됨!' : '추가됨!', 'success');
+  });
+}
+
+/* ============================================================
+ * 회의록
+ * ============================================================ */
+function renderMinutes() {
+  const list = $('#minuteList');
+  if (!list) return;
+  const minutes = teamItems.filter(x => x.type === 'minute')
+    .sort((a, b) => b.data.date.localeCompare(a.data.date));
+  if (minutes.length === 0) {
+    list.innerHTML = `<div class="empty">📋 아직 회의록이 없어요.<br>첫 회의록을 작성해보세요!</div>`;
+    return;
+  }
+  list.innerHTML = minutes.map(m => {
+    const d = m.data;
+    const attendeeHtml = (d.attendees || []).map((a, i) => {
+      const mi = MEMBERS.findIndex(mb => mb.name === a);
+      const label = mi >= 0 ? MEMBERS[mi].nick : a;
+      return `<span class="minute-attendee" style="${mi>=0?`color:${['#f5a623','#ff6b6b','#b07cff'][mi]}`:''}"> ${escapeHtml(label)}</span>`;
+    }).join('');
+    const preview = (d.content || '').replace(/\n/g, ' ').trim();
+    return `
+      <div class="minute-card" data-id="${m.id}">
+        <div class="minute-top">
+          <span class="minute-date">${d.date}</span>
+          <span class="minute-title">${escapeHtml(d.title)}</span>
+        </div>
+        ${attendeeHtml ? `<div class="minute-attendees">${attendeeHtml}</div>` : ''}
+        ${preview ? `<div class="minute-preview">${escapeHtml(preview)}</div>` : ''}
+      </div>`;
+  }).join('');
+  list.querySelectorAll('.minute-card').forEach(card =>
+    card.addEventListener('click', () => {
+      const item = teamItems.find(x => x.id === card.dataset.id);
+      if (item) openMinuteModal(item);
+    })
+  );
+}
+
+function openMinuteModal(item) {
+  const d = item ? item.data : {};
+  const isEdit = !!item;
+  const today = fmtDate(new Date());
+  openModal(`
+    <h3>${isEdit ? '📋 회의록 수정' : '📋 회의록 작성'}</h3>
+    <div class="input-row">
+      <label>날짜</label>
+      <input type="date" id="mn-date" value="${d.date || today}" />
+    </div>
+    <div class="input-row">
+      <label>제목</label>
+      <input id="mn-title" placeholder="예: 5월 2주차 주간회의" value="${escapeHtml(d.title || '')}" />
+    </div>
+    <div class="input-row">
+      <label>참석자</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 0;">
+        ${MEMBERS.map((m, mi) => `
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" value="${m.name}" ${(d.attendees||[]).includes(m.name)?'checked':''} />
+            <span style="color:${['#f5a623','#ff6b6b','#b07cff'][mi]}">${m.nick}</span>
+          </label>`).join('')}
+      </div>
+    </div>
+    <div class="input-row">
+      <label>내용</label>
+      <textarea id="mn-content" placeholder="회의 내용, 결정사항, 액션아이템 등..." style="min-height:180px;">${escapeHtml(d.content || '')}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-close>취소</button>
+      ${isEdit ? `<button class="btn" id="mn-del" style="background:var(--danger);color:#fff;margin-right:auto;">삭제</button>` : ''}
+      <button class="btn" id="mn-save">${isEdit ? '저장' : '작성'}</button>
+    </div>
+  `);
+  $('[data-close]').addEventListener('click', closeModal);
+  if (isEdit) {
+    $('#mn-del').addEventListener('click', async () => {
+      if (!confirm('삭제할까요?')) return;
+      await deleteTeamItem(item.id);
+      closeModal(); renderMinutes(); toast('삭제됨');
+    });
+  }
+  $('#mn-save').addEventListener('click', async () => {
+    const title = $('#mn-title').value.trim();
+    if (!title) { toast('제목을 입력하세요', 'error'); return; }
+    const attendees = [...document.querySelectorAll('#modal input[type=checkbox]:checked')].map(c => c.value);
+    const itemData = {
+      date: $('#mn-date').value,
+      title,
+      attendees,
+      content: $('#mn-content').value.trim()
+    };
+    $('#mn-save').disabled = true;
+    if (isEdit) await updateTeamItem(item.id, itemData);
+    else await addTeamItem('minute', itemData);
+    closeModal(); renderMinutes();
+    toast(isEdit ? '수정됨!' : '회의록 저장됨!', 'success');
   });
 }
 
@@ -2014,6 +2313,7 @@ function renderAll() {
   renderRecent();
   renderFileGrid();
   updateFileCounts();
+  renderContentSchedule();
 }
 </script>
 </body>
