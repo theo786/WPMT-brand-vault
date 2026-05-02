@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>" />
-<title>WPMT Brand Vault</title>
+<title>WIMP MATTER. STUDIO</title>
 <style>
   :root {
     --bg: #0d0f14;
@@ -613,6 +613,37 @@
     color: var(--muted); font-size: 12px; line-height: 1.5;
     overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   }
+  /* ===== 노션형 에디터 ===== */
+  .editor-toolbar {
+    display: flex; gap: 4px; flex-wrap: wrap; padding: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0; border-bottom: none;
+  }
+  .editor-toolbar button {
+    padding: 4px 9px; border-radius: 6px; border: 1px solid transparent;
+    background: none; color: var(--text); font-size: 13px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .editor-toolbar button:hover { background: var(--panel-3); border-color: var(--border); }
+  .editor-toolbar button.active { background: var(--accent); color: #181014; }
+  .editor-toolbar .sep { width: 1px; background: var(--border); margin: 2px 4px; }
+  .rich-editor {
+    min-height: 280px; padding: 14px 16px;
+    border: 1px solid var(--border); border-radius: 0 0 8px 8px;
+    background: var(--panel); color: var(--text);
+    outline: none; line-height: 1.7; font-size: 14px;
+    overflow-y: auto;
+  }
+  .rich-editor:focus { border-color: var(--accent); }
+  .rich-editor h1 { font-size: 22px; font-weight: 800; margin: 12px 0 6px; }
+  .rich-editor h2 { font-size: 18px; font-weight: 700; margin: 10px 0 5px; }
+  .rich-editor h3 { font-size: 15px; font-weight: 700; margin: 8px 0 4px; color: var(--muted); }
+  .rich-editor img { max-width: 100%; border-radius: 8px; margin: 6px 0; cursor: pointer; }
+  .rich-editor .img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+  .rich-editor .img-grid img { width: 100%; height: 180px; object-fit: cover; }
+  .rich-editor details { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+  .rich-editor summary { cursor: pointer; font-weight: 600; user-select: none; }
+  .rich-editor details[open] summary { margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -620,8 +651,8 @@
 <!-- ========== 로그인 ========== -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
-    <h2>🎨 WPMT Brand Vault</h2>
-    <p>윔프매터 브랜드 운영용 보관함</p>
+    <h2>WIMP MATTER. STUDIO</h2>
+    <p>윔프매터 스튜디오 운영 시스템</p>
 
     <div id="authStep1">
       <button class="auth-btn google" id="googleBtn">
@@ -647,7 +678,7 @@
 <!-- ========== 메인 ========== -->
 <div id="app" style="display:none">
   <header class="topbar">
-    <div class="brand">🎨 WPMT Brand Vault</div>
+    <div class="brand">WIMP MATTER. STUDIO</div>
     <div class="topbar-right">
       <div class="drive-status on" id="driveStatus" title="로컬 저장소 (GoogleDrive 마운트)">
         <span class="dot"></span><span id="driveLabel">Drive 연결됨</span>
@@ -668,8 +699,8 @@
 
     <!-- 탭 -->
     <div class="tabs">
-      <button data-tab="schedule" class="active">📅 스케줄</button>
-      <button data-tab="tasks">✅ 업무</button>
+      <button data-tab="tasks" class="active">✅ 업무</button>
+      <button data-tab="schedule">📅 스케줄</button>
       <button data-tab="minutes">📋 회의록</button>
       <button data-tab="reference">🎨 레퍼런스</button>
       <button data-tab="filevault">📂 파일보관함</button>
@@ -812,7 +843,7 @@ let driveFolderId = null; // 미사용 (로컬 API)
 let activeCategory = 'all';
 let activeFileFilter = 'all';
 let activeRandomType = 'all';
-let activeTab = 'schedule';
+let activeTab = 'tasks';
 let activeSubTab = 'bookmarks';
 
 let teamItems = [];
@@ -2074,7 +2105,8 @@ function renderMinutes() {
       const label = mi >= 0 ? MEMBERS[mi].nick : a;
       return `<span class="minute-attendee" style="${mi>=0?`color:${['#f5a623','#ff6b6b','#b07cff'][mi]}`:''}"> ${escapeHtml(label)}</span>`;
     }).join('');
-    const preview = (d.content || '').replace(/\n/g, ' ').trim();
+    const tmp = document.createElement('div'); tmp.innerHTML = d.content || '';
+    const preview = (tmp.textContent || '').replace(/\s+/g, ' ').trim();
     return `
       <div class="minute-card" data-id="${m.id}">
         <div class="minute-top">
@@ -2082,7 +2114,7 @@ function renderMinutes() {
           <span class="minute-title">${escapeHtml(d.title)}</span>
         </div>
         ${attendeeHtml ? `<div class="minute-attendees">${attendeeHtml}</div>` : ''}
-        ${preview ? `<div class="minute-preview">${escapeHtml(preview)}</div>` : ''}
+        ${preview ? `<div class="minute-preview">${escapeHtml(preview.slice(0, 120))}</div>` : ''}
       </div>`;
   }).join('');
   list.querySelectorAll('.minute-card').forEach(card =>
@@ -2097,15 +2129,17 @@ function openMinuteModal(item) {
   const d = item ? item.data : {};
   const isEdit = !!item;
   const today = fmtDate(new Date());
-  openModal(`
+  openWideModal(`
     <h3>${isEdit ? '📋 회의록 수정' : '📋 회의록 작성'}</h3>
-    <div class="input-row">
-      <label>날짜</label>
-      <input type="date" id="mn-date" value="${d.date || today}" />
-    </div>
-    <div class="input-row">
-      <label>제목</label>
-      <input id="mn-title" placeholder="예: 5월 2주차 주간회의" value="${escapeHtml(d.title || '')}" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="input-row" style="margin:0">
+        <label>날짜</label>
+        <input type="date" id="mn-date" value="${d.date || today}" />
+      </div>
+      <div class="input-row" style="margin:0">
+        <label>제목</label>
+        <input id="mn-title" placeholder="예: 5월 2주차 주간회의" value="${escapeHtml(d.title || '')}" />
+      </div>
     </div>
     <div class="input-row">
       <label>참석자</label>
@@ -2117,16 +2151,95 @@ function openMinuteModal(item) {
           </label>`).join('')}
       </div>
     </div>
-    <div class="input-row">
-      <label>내용</label>
-      <textarea id="mn-content" placeholder="회의 내용, 결정사항, 액션아이템 등..." style="min-height:180px;">${escapeHtml(d.content || '')}</textarea>
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">내용</label>
+    <div class="editor-toolbar" id="editorToolbar">
+      <button data-cmd="h1" title="제목1">H1</button>
+      <button data-cmd="h2" title="제목2">H2</button>
+      <button data-cmd="h3" title="제목3">H3</button>
+      <div class="sep"></div>
+      <button data-cmd="bold" title="굵게"><b>B</b></button>
+      <button data-cmd="italic" title="기울임"><i>I</i></button>
+      <div class="sep"></div>
+      <button data-cmd="img" title="이미지 삽입">🖼</button>
+      <button data-cmd="grid" title="이미지 그리드 (2열)">⊞</button>
+      <button data-cmd="toggle" title="접기/펼치기">▶ 접기</button>
     </div>
+    <div class="rich-editor" id="mn-editor" contenteditable="true">${d.content || '<p>내용을 입력하세요...</p>'}</div>
+    <input type="file" id="mn-img-input" accept="image/*" multiple style="display:none" />
     <div class="modal-actions">
       <button class="btn ghost" data-close>취소</button>
       ${isEdit ? `<button class="btn" id="mn-del" style="background:var(--danger);color:#fff;margin-right:auto;">삭제</button>` : ''}
       <button class="btn" id="mn-save">${isEdit ? '저장' : '작성'}</button>
     </div>
   `);
+
+  const editor = $('#mn-editor');
+  const imgInput = $('#mn-img-input');
+  let pendingGrid = false;
+
+  // 초기 placeholder 클리어
+  editor.addEventListener('focus', () => {
+    if (editor.innerHTML === '<p>내용을 입력하세요...</p>') {
+      editor.innerHTML = '';
+    }
+  });
+
+  // 툴바 커맨드
+  $('#editorToolbar').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    const cmd = btn.dataset.cmd;
+    editor.focus();
+    if (cmd === 'bold') { document.execCommand('bold'); }
+    else if (cmd === 'italic') { document.execCommand('italic'); }
+    else if (cmd === 'h1') { document.execCommand('formatBlock', false, 'h1'); }
+    else if (cmd === 'h2') { document.execCommand('formatBlock', false, 'h2'); }
+    else if (cmd === 'h3') { document.execCommand('formatBlock', false, 'h3'); }
+    else if (cmd === 'img') { pendingGrid = false; imgInput.click(); }
+    else if (cmd === 'grid') { pendingGrid = true; imgInput.multiple = true; imgInput.click(); }
+    else if (cmd === 'toggle') {
+      const sel = window.getSelection();
+      const text = sel && sel.toString().trim() ? sel.toString() : '접기/펼치기 제목';
+      const details = `<details><summary>${text}</summary><p>내용을 입력하세요</p></details><p></p>`;
+      document.execCommand('insertHTML', false, details);
+    }
+  });
+
+  // 이미지 삽입
+  imgInput.addEventListener('change', async () => {
+    const files = Array.from(imgInput.files);
+    if (!files.length) return;
+    editor.focus();
+    if (pendingGrid && files.length >= 2) {
+      let imgs = '';
+      for (const f of files) {
+        const url = await toDataURL(f);
+        imgs += `<img src="${url}" />`;
+      }
+      document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
+    } else {
+      for (const f of files) {
+        const url = await toDataURL(f);
+        document.execCommand('insertHTML', false, `<img src="${url}" /><p></p>`);
+      }
+    }
+    imgInput.value = '';
+  });
+
+  function toDataURL(file) {
+    return new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.readAsDataURL(file);
+    });
+  }
+
+  // 키보드 단축키
+  editor.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
+  });
+
   $('[data-close]').addEventListener('click', closeModal);
   if (isEdit) {
     $('#mn-del').addEventListener('click', async () => {
@@ -2139,12 +2252,8 @@ function openMinuteModal(item) {
     const title = $('#mn-title').value.trim();
     if (!title) { toast('제목을 입력하세요', 'error'); return; }
     const attendees = [...document.querySelectorAll('#modal input[type=checkbox]:checked')].map(c => c.value);
-    const itemData = {
-      date: $('#mn-date').value,
-      title,
-      attendees,
-      content: $('#mn-content').value.trim()
-    };
+    const content = editor.innerHTML;
+    const itemData = { date: $('#mn-date').value, title, attendees, content };
     $('#mn-save').disabled = true;
     if (isEdit) await updateTeamItem(item.id, itemData);
     else await addTeamItem('minute', itemData);
