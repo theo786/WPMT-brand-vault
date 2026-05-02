@@ -205,6 +205,26 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
+  /* 레퍼런스 한 줄 추가 폼 */
+  .ref-add-row {
+    display: flex; gap: 8px; align-items: center;
+    padding: 8px 12px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .ref-add-row input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .ref-add-row select {
+    background: var(--panel-3); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; border-radius: 6px;
+    padding: 4px 6px; font-family: inherit; cursor: pointer;
+  }
+  .ref-add-row .btn-primary {
+    padding: 5px 14px; font-size: 12px; white-space: nowrap;
+  }
+
   /* === 탭 (북마크 / 파일) === */
   .tabs {
     display: flex; gap: 4px; margin-bottom: 16px;
@@ -613,16 +633,18 @@
 
     <!-- 탭 -->
     <div class="tabs">
-      <button data-tab="schedule" class="active">📅 콘텐츠 스케줄</button>
+      <button data-tab="schedule" class="active">📅 스케줄</button>
       <button data-tab="tasks">✅ 업무</button>
       <button data-tab="minutes">📋 회의록</button>
       <button data-tab="reference">🎨 레퍼런스</button>
+      <button data-tab="filevault">📂 파일보관함</button>
+      <button data-tab="random">✨ 랜덤뽑기</button>
     </div>
 
     <!-- 콘텐츠 스케줄 뷰 -->
     <section id="scheduleView">
       <div class="section-header">
-        <h2>📅 콘텐츠 스케줄</h2>
+        <h2>📅 스케줄</h2>
         <button class="btn-primary" id="addContentBtn">+ 추가</button>
       </div>
       <div class="schedule-nav">
@@ -638,6 +660,9 @@
       <div class="section-header">
         <h2>✅ 업무 분배</h2>
       </div>
+      <div id="teamDbBanner" style="display:none; background:rgba(255,107,107,0.1); border:1px solid var(--danger); border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--danger);">
+        ⚠️ Supabase 테이블이 없습니다. <b>wpmt_team_board</b> SQL을 먼저 실행해주세요.
+      </div>
       <div class="task-board" id="taskBoard"></div>
     </section>
 
@@ -650,70 +675,58 @@
       <div class="minute-list" id="minuteList"></div>
     </section>
 
-    <!-- 레퍼런스 뷰 -->
+    <!-- 레퍼런스 뷰 — 북마크만 심플하게 -->
     <section id="referenceView" style="display:none">
-      <!-- 대시보드 -->
-      <div class="dashboard">
+      <div class="ref-add-row">
+        <input id="urlInput" placeholder="URL 붙여넣기…" />
+        <select id="categorySelect">
+          <option value="이미지 프롬프트">이미지 프롬프트</option>
+          <option value="콘텐츠 아이디어">콘텐츠 아이디어</option>
+          <option value="관련 서비스">관련 서비스</option>
+          <option value="굿즈">굿즈</option>
+          <option value="AI ETC">AI ETC</option>
+        </select>
+        <button class="btn-primary" id="addBtn">추가</button>
+      </div>
+      <div class="cats-row" id="catsRow"></div>
+      <div class="grid" id="bookmarkGrid"></div>
+    </section>
+
+    <!-- 파일보관함 뷰 -->
+    <section id="filevaultView" style="display:none">
+      <div class="section-header" style="margin-bottom:12px;">
+        <h2>📂 파일보관함</h2>
+        <button class="icon-btn" id="refreshFilesBtn">↻ 새로고침</button>
+      </div>
+      <div class="drop" id="dropZone" style="margin-bottom:14px;">
+        <div class="ico">⬆️</div>
+        <div class="label">드래그하거나 클릭하여 업로드</div>
+        <div class="sublabel">이미지·영상 파일 → Google Drive 자동 저장</div>
+        <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" />
+      </div>
+      <div class="upload-progress" id="uploadProgress"></div>
+      <div class="cats-row" style="margin-top:10px;">
+        <button class="cat-chip active" data-ft="all">전체 <span class="n" id="fct-all">0</span></button>
+        <button class="cat-chip" data-ft="image">이미지 <span class="n" id="fct-image">0</span></button>
+        <button class="cat-chip" data-ft="video">영상 <span class="n" id="fct-video">0</span></button>
+      </div>
+      <div class="file-grid" id="fileGrid"></div>
+    </section>
+
+    <!-- 랜덤뽑기 뷰 -->
+    <section id="randomView" style="display:none">
+      <div style="max-width:420px; margin:40px auto 0;">
         <div class="block">
-          <h3>🔗 북마크 추가</h3>
-          <div class="hint">URL 붙여넣고 카테고리 선택</div>
-          <div class="url-row"><input id="urlInput" placeholder="https://..." /></div>
-          <div class="url-row">
-            <select id="categorySelect">
-              <option value="이미지 프롬프트">이미지 프롬프트</option>
-              <option value="콘텐츠 아이디어">콘텐츠 아이디어</option>
-              <option value="관련 서비스">관련 서비스</option>
-              <option value="굿즈">굿즈</option>
-              <option value="AI ETC">AI ETC</option>
-            </select>
-            <button class="btn-primary" id="addBtn">추가</button>
-          </div>
-          <div class="recent-list" id="recentList"></div>
-        </div>
-        <div class="block">
-          <h3>📂 파일 업로드</h3>
-          <div class="hint">이미지/영상을 Drive로 업로드</div>
-          <div class="drop" id="dropZone">
-            <div class="ico">⬆️</div>
-            <div class="label">드래그하거나 클릭</div>
-            <div class="sublabel">이미지·영상 파일</div>
-            <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" />
-          </div>
-          <div class="upload-progress" id="uploadProgress"></div>
-        </div>
-        <div class="block">
-          <h3>🎲 랜덤 뽑기</h3>
-          <div class="random-tabs">
+          <h3 style="font-size:20px; text-align:center; margin-bottom:16px;">✨ 랜덤 뽑기</h3>
+          <div class="random-tabs" style="justify-content:center; margin-bottom:14px;">
             <button data-rt="all" class="active">전체</button>
             <button data-rt="image">이미지</button>
             <button data-rt="video">영상</button>
+            <button data-rt="bookmark">북마크</button>
           </div>
-          <button class="roll-btn" id="rollBtn">🎲 뽑기</button>
-          <div class="random-result" id="randomResult">파일 업로드 후 뽑기 가능</div>
+          <button class="roll-btn" id="rollBtn" style="width:100%; font-size:20px; padding:18px;">✨ 뽑기</button>
+          <div class="random-result" id="randomResult" style="min-height:200px; margin-top:12px;">파일 또는 북마크 추가 후 뽑기 가능</div>
         </div>
-      </div>
-
-      <!-- 서브탭 -->
-      <div class="sub-tabs">
-        <button data-subtab="bookmarks" class="active">🔗 북마크</button>
-        <button data-subtab="files">📂 파일 <span id="fileCount" style="opacity:0.6">(0)</span></button>
-      </div>
-
-      <!-- 북마크 서브뷰 -->
-      <div id="bookmarksView">
-        <div class="cats-row" id="catsRow"></div>
-        <div class="grid" id="bookmarkGrid"></div>
-      </div>
-
-      <!-- 파일 서브뷰 -->
-      <div id="filesView" style="display:none">
-        <div class="cats-row">
-          <button class="cat-chip active" data-ft="all">전체 <span class="n" id="fct-all">0</span></button>
-          <button class="cat-chip" data-ft="image">이미지 <span class="n" id="fct-image">0</span></button>
-          <button class="cat-chip" data-ft="video">영상 <span class="n" id="fct-video">0</span></button>
-          <button class="icon-btn" id="refreshFilesBtn" style="margin-left:auto">↻ 새로고침</button>
-        </div>
-        <div class="file-grid" id="fileGrid"></div>
       </div>
     </section>
 
@@ -1418,6 +1431,12 @@ $$('.random-tabs button').forEach(b => {
 });
 
 $('#rollBtn').addEventListener('click', async () => {
+  if (activeRandomType === 'bookmark') {
+    if (bookmarks.length === 0) { toast('북마크가 없어요', 'error'); return; }
+    const pick = bookmarks[Math.floor(Math.random() * bookmarks.length)];
+    showRandomBookmark(pick);
+    return;
+  }
   if (!isDriveConnected()) {
     if (!getSavedClientId()) promptForClientId();
     else requestDriveToken(false);
@@ -1428,10 +1447,28 @@ $('#rollBtn').addEventListener('click', async () => {
   let pool = driveFiles;
   if (activeRandomType === 'image') pool = pool.filter(f => /^image\//.test(f.mimeType));
   else if (activeRandomType === 'video') pool = pool.filter(f => /^video\//.test(f.mimeType));
+  else if (activeRandomType === 'all') {
+    const bkPool = bookmarks.map(b => ({ _type: 'bookmark', ...b }));
+    pool = [...driveFiles, ...bkPool];
+  }
   if (pool.length === 0) { toast('해당 타입 파일이 없어요', 'error'); return; }
   const pick = pool[Math.floor(Math.random() * pool.length)];
+  if (pick._type === 'bookmark') { showRandomBookmark(pick); return; }
   showRandomPick(pick);
 });
+
+function showRandomBookmark(bk) {
+  const result = $('#randomResult');
+  result.style.cursor = 'pointer';
+  result.onclick = () => window.open(bk.url, '_blank');
+  result.innerHTML = `
+    <div style="padding:16px; text-align:center;">
+      <div style="font-size:28px; margin-bottom:8px;">🔖</div>
+      <div style="font-weight:700; font-size:15px; margin-bottom:4px;">${escapeHtml(bk.title || bk.url)}</div>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:10px;">${escapeHtml(bk.category || '')}</div>
+      <a href="${escapeHtml(bk.url)}" target="_blank" style="color:var(--accent); font-size:12px; word-break:break-all;">${escapeHtml(bk.url)}</a>
+    </div>`;
+}
 
 async function showRandomPick(file) {
   const result = $('#randomResult');
@@ -1578,7 +1615,7 @@ function updateFileCounts() {
   $('#fct-all').textContent = all;
   $('#fct-image').textContent = img;
   $('#fct-video').textContent = vid;
-  $('#fileCount').textContent = `(${all})`;
+  const fc = $('#fileCount'); if (fc) fc.textContent = `(${all})`;
 }
 
 function renderFileGrid() {
@@ -1684,28 +1721,19 @@ function switchTab(tab) {
   const btn = document.querySelector(`.tabs button[data-tab="${tab}"]`);
   if (btn) btn.classList.add('active');
   activeTab = tab;
-  $('#scheduleView').style.display  = tab === 'schedule'  ? 'block' : 'none';
-  $('#tasksView').style.display     = tab === 'tasks'     ? 'block' : 'none';
-  $('#minutesView').style.display   = tab === 'minutes'   ? 'block' : 'none';
-  $('#referenceView').style.display = tab === 'reference' ? 'block' : 'none';
+  $('#scheduleView').style.display   = tab === 'schedule'   ? 'block' : 'none';
+  $('#tasksView').style.display      = tab === 'tasks'      ? 'block' : 'none';
+  $('#minutesView').style.display    = tab === 'minutes'    ? 'block' : 'none';
+  $('#referenceView').style.display  = tab === 'reference'  ? 'block' : 'none';
+  $('#filevaultView').style.display  = tab === 'filevault'  ? 'block' : 'none';
+  $('#randomView').style.display     = tab === 'random'     ? 'block' : 'none';
   if (tab === 'schedule')  renderContentSchedule();
   if (tab === 'tasks')     renderTasks();
   if (tab === 'minutes')   renderMinutes();
-  if (tab === 'reference' && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
+  if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
 $$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-
-$$('.sub-tabs button').forEach(b => {
-  b.addEventListener('click', () => {
-    $$('.sub-tabs button').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    activeSubTab = b.dataset.subtab;
-    $('#bookmarksView').style.display = activeSubTab === 'bookmarks' ? 'block' : 'none';
-    $('#filesView').style.display     = activeSubTab === 'files'     ? 'block' : 'none';
-    if (activeSubTab === 'files' && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
-  });
-});
 
 $('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
 $('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
@@ -1824,7 +1852,14 @@ async function loadTeamBoard() {
     .from('wpmt_team_board')
     .select('id, type, data, created_at')
     .order('created_at', { ascending: true });
-  if (error) { console.error('team board load error', error); return; }
+  if (error) {
+    console.error('team board load error', error);
+    const banner = $('#teamDbBanner');
+    if (banner) banner.style.display = 'block';
+    return;
+  }
+  const banner = $('#teamDbBanner');
+  if (banner) banner.style.display = 'none';
   teamItems = data || [];
 }
 
