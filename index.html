@@ -513,89 +513,16 @@
 
   <div class="container">
 
-    <!-- 홈 대시보드 -->
-    <div class="dashboard">
-      <!-- 1. URL 추가 -->
-      <div class="block">
-        <h3>🔗 북마크 추가</h3>
-        <div class="hint">URL 붙여넣고 카테고리 선택</div>
-        <div class="url-row">
-          <input id="urlInput" placeholder="https://..." />
-        </div>
-        <div class="url-row">
-          <select id="categorySelect">
-            <option value="이미지 프롬프트">이미지 프롬프트</option>
-            <option value="콘텐츠 아이디어">콘텐츠 아이디어</option>
-            <option value="관련 서비스">관련 서비스</option>
-            <option value="굿즈">굿즈</option>
-            <option value="AI ETC">AI ETC</option>
-          </select>
-          <button class="btn-primary" id="addBtn">추가</button>
-        </div>
-        <div class="recent-list" id="recentList"></div>
-      </div>
-
-      <!-- 2. 드래그앤드롭 -->
-      <div class="block">
-        <h3>📂 파일 업로드</h3>
-        <div class="hint">이미지/영상을 Drive로 업로드</div>
-        <div class="drop" id="dropZone">
-          <div class="ico">⬆️</div>
-          <div class="label">드래그하거나 클릭</div>
-          <div class="sublabel">이미지·영상 파일</div>
-          <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" />
-        </div>
-        <div class="upload-progress" id="uploadProgress"></div>
-      </div>
-
-      <!-- 3. 랜덤 뽑기 -->
-      <div class="block">
-        <h3>🎲 랜덤 뽑기</h3>
-        <div class="random-tabs">
-          <button data-rt="all" class="active">전체</button>
-          <button data-rt="image">이미지</button>
-          <button data-rt="video">영상</button>
-        </div>
-        <button class="roll-btn" id="rollBtn">🎲 뽑기</button>
-        <div class="random-result" id="randomResult">파일 업로드 후 뽑기 가능</div>
-      </div>
-    </div>
-
     <!-- 탭 -->
     <div class="tabs">
-      <button data-tab="bookmarks" class="active">🔗 레퍼런스</button>
-      <button data-tab="files">📂 파일 보관함 <span id="fileCount" style="opacity:0.6">(0)</span></button>
+      <button data-tab="schedule" class="active">📅 콘텐츠 스케줄</button>
       <button data-tab="tasks">✅ 업무</button>
-      <button data-tab="schedule">📅 콘텐츠 스케줄</button>
+      <button data-tab="minutes">📋 회의록</button>
+      <button data-tab="reference">🎨 레퍼런스</button>
     </div>
 
-    <!-- 북마크 뷰 -->
-    <section id="bookmarksView">
-      <div class="cats-row" id="catsRow"></div>
-      <div class="grid" id="bookmarkGrid"></div>
-    </section>
-
-    <!-- 파일 뷰 -->
-    <section id="filesView" style="display:none">
-      <div class="cats-row">
-        <button class="cat-chip active" data-ft="all">전체 <span class="n" id="fct-all">0</span></button>
-        <button class="cat-chip" data-ft="image">이미지 <span class="n" id="fct-image">0</span></button>
-        <button class="cat-chip" data-ft="video">영상 <span class="n" id="fct-video">0</span></button>
-        <button class="icon-btn" id="refreshFilesBtn" style="margin-left:auto">↻ 새로고침</button>
-      </div>
-      <div class="file-grid" id="fileGrid"></div>
-    </section>
-
-    <!-- 업무 뷰 -->
-    <section id="tasksView" style="display:none">
-      <div class="section-header">
-        <h2>✅ 업무 분배</h2>
-      </div>
-      <div class="task-board" id="taskBoard"></div>
-    </section>
-
     <!-- 콘텐츠 스케줄 뷰 -->
-    <section id="scheduleView" style="display:none">
+    <section id="scheduleView">
       <div class="section-header">
         <h2>📅 콘텐츠 스케줄</h2>
         <button class="btn-primary" id="addContentBtn">+ 추가</button>
@@ -606,6 +533,90 @@
         <button class="nav-btn" id="nextWeekBtn">다음 →</button>
       </div>
       <div class="schedule-grid" id="scheduleGrid"></div>
+    </section>
+
+    <!-- 업무 뷰 -->
+    <section id="tasksView" style="display:none">
+      <div class="section-header">
+        <h2>✅ 업무 분배</h2>
+      </div>
+      <div class="task-board" id="taskBoard"></div>
+    </section>
+
+    <!-- 회의록 뷰 -->
+    <section id="minutesView" style="display:none">
+      <div class="section-header">
+        <h2>📋 회의록</h2>
+        <button class="btn-primary" id="addMinuteBtn">+ 회의록 작성</button>
+      </div>
+      <div class="minute-list" id="minuteList"></div>
+    </section>
+
+    <!-- 레퍼런스 뷰 -->
+    <section id="referenceView" style="display:none">
+      <!-- 대시보드 -->
+      <div class="dashboard">
+        <div class="block">
+          <h3>🔗 북마크 추가</h3>
+          <div class="hint">URL 붙여넣고 카테고리 선택</div>
+          <div class="url-row"><input id="urlInput" placeholder="https://..." /></div>
+          <div class="url-row">
+            <select id="categorySelect">
+              <option value="이미지 프롬프트">이미지 프롬프트</option>
+              <option value="콘텐츠 아이디어">콘텐츠 아이디어</option>
+              <option value="관련 서비스">관련 서비스</option>
+              <option value="굿즈">굿즈</option>
+              <option value="AI ETC">AI ETC</option>
+            </select>
+            <button class="btn-primary" id="addBtn">추가</button>
+          </div>
+          <div class="recent-list" id="recentList"></div>
+        </div>
+        <div class="block">
+          <h3>📂 파일 업로드</h3>
+          <div class="hint">이미지/영상을 Drive로 업로드</div>
+          <div class="drop" id="dropZone">
+            <div class="ico">⬆️</div>
+            <div class="label">드래그하거나 클릭</div>
+            <div class="sublabel">이미지·영상 파일</div>
+            <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" />
+          </div>
+          <div class="upload-progress" id="uploadProgress"></div>
+        </div>
+        <div class="block">
+          <h3>🎲 랜덤 뽑기</h3>
+          <div class="random-tabs">
+            <button data-rt="all" class="active">전체</button>
+            <button data-rt="image">이미지</button>
+            <button data-rt="video">영상</button>
+          </div>
+          <button class="roll-btn" id="rollBtn">🎲 뽑기</button>
+          <div class="random-result" id="randomResult">파일 업로드 후 뽑기 가능</div>
+        </div>
+      </div>
+
+      <!-- 서브탭 -->
+      <div class="sub-tabs">
+        <button data-subtab="bookmarks" class="active">🔗 북마크</button>
+        <button data-subtab="files">📂 파일 <span id="fileCount" style="opacity:0.6">(0)</span></button>
+      </div>
+
+      <!-- 북마크 서브뷰 -->
+      <div id="bookmarksView">
+        <div class="cats-row" id="catsRow"></div>
+        <div class="grid" id="bookmarkGrid"></div>
+      </div>
+
+      <!-- 파일 서브뷰 -->
+      <div id="filesView" style="display:none">
+        <div class="cats-row">
+          <button class="cat-chip active" data-ft="all">전체 <span class="n" id="fct-all">0</span></button>
+          <button class="cat-chip" data-ft="image">이미지 <span class="n" id="fct-image">0</span></button>
+          <button class="cat-chip" data-ft="video">영상 <span class="n" id="fct-video">0</span></button>
+          <button class="icon-btn" id="refreshFilesBtn" style="margin-left:auto">↻ 새로고침</button>
+        </div>
+        <div class="file-grid" id="fileGrid"></div>
+      </div>
     </section>
 
   </div>
