@@ -644,6 +644,79 @@
   .rich-editor details { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
   .rich-editor summary { cursor: pointer; font-weight: 600; user-select: none; }
   .rich-editor details[open] summary { margin-bottom: 8px; }
+
+  /* ===== 세미 노션 ===== */
+  .snote-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+    height: calc(100vh - 155px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .snote-sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .snote-sidebar-top {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  #noteList {
+    flex: 1; overflow-y: auto; padding: 6px;
+  }
+  .note-list-item {
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    margin-bottom: 3px; transition: background 0.12s; border-left: 3px solid transparent;
+  }
+  .note-list-item:hover { background: var(--panel-2); }
+  .note-list-item.active {
+    background: var(--panel-3);
+    border-left-color: var(--accent);
+  }
+  .note-list-item .nli-title {
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .note-list-item .nli-date {
+    font-size: 11px; color: var(--muted); margin-top: 2px;
+  }
+  .snote-editor-panel {
+    display: flex; flex-direction: column; overflow: hidden; background: var(--panel);
+  }
+  .snote-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 14px;
+  }
+  .snote-editor-wrap {
+    display: flex; flex-direction: column;
+    height: 100%; overflow: hidden; padding: 16px 20px;
+  }
+  .snote-title-input {
+    width: 100%; background: transparent; border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text); font-size: 22px; font-weight: 700;
+    padding: 8px 2px; margin-bottom: 12px; outline: none;
+    font-family: inherit;
+  }
+  .snote-title-input::placeholder { color: var(--muted); }
+  .snote-editor-wrap .editor-toolbar { flex-shrink: 0; }
+  .rich-editor.snote-rich {
+    flex: 1; min-height: 0; border-radius: 0 0 8px 8px;
+    max-height: none; height: 100%; overflow-y: auto;
+  }
+  .snote-actions {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 10px; border-top: 1px solid var(--border); margin-top: 10px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 700px) {
+    .snote-layout { grid-template-columns: 1fr; }
+    .snote-sidebar { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -702,6 +775,7 @@
       <button data-tab="tasks" class="active">✅ 업무</button>
       <button data-tab="schedule">📅 스케줄</button>
       <button data-tab="minutes">📋 회의록</button>
+      <button data-tab="seminotion">📝 세미 노션</button>
       <button data-tab="reference">🎨 레퍼런스</button>
       <button data-tab="filevault">📂 파일보관함</button>
       <button data-tab="random">✨ 랜덤뽑기</button>
@@ -777,6 +851,45 @@
         <button class="cat-chip" data-ft="video">영상 <span class="n" id="fct-video">0</span></button>
       </div>
       <div class="file-grid" id="fileGrid"></div>
+    </section>
+
+    <!-- 세미 노션 뷰 -->
+    <section id="seminotionView" style="display:none">
+      <div class="snote-layout">
+        <div class="snote-sidebar">
+          <div class="snote-sidebar-top">
+            <button class="btn-primary" id="addNoteBtn" style="width:100%;text-align:center;">+ 새 노트</button>
+          </div>
+          <div id="noteList"></div>
+        </div>
+        <div class="snote-editor-panel">
+          <div class="snote-empty" id="snoteEmpty">← 노트를 선택하거나 새로 만드세요</div>
+          <div class="snote-editor-wrap" id="snoteEditorWrap" style="display:none">
+            <input class="snote-title-input" id="snoteTitle" placeholder="제목 없음" />
+            <div class="editor-toolbar" id="snoteToolbar">
+              <button data-scmd="h1" title="제목1">H1</button>
+              <button data-scmd="h2" title="제목2">H2</button>
+              <button data-scmd="h3" title="제목3">H3</button>
+              <div class="sep"></div>
+              <button data-scmd="bold" title="굵게"><b>B</b></button>
+              <button data-scmd="italic" title="기울임"><i>I</i></button>
+              <div class="sep"></div>
+              <button data-scmd="ul" title="목록">• 목록</button>
+              <button data-scmd="ol" title="번호 목록">① 목록</button>
+              <div class="sep"></div>
+              <button data-scmd="img" title="이미지 삽입">🖼</button>
+              <button data-scmd="grid" title="이미지 그리드 (2열)">⊞</button>
+              <button data-scmd="toggle" title="접기/펼치기">▶ 접기</button>
+            </div>
+            <div class="rich-editor snote-rich" id="snoteContent" contenteditable="true"></div>
+            <input type="file" id="snote-img-input" accept="image/*" multiple style="display:none" />
+            <div class="snote-actions">
+              <span id="snoteSaveStatus" style="font-size:12px;color:var(--muted);">저장됨</span>
+              <button class="btn ghost" id="snoteDeleteBtn" style="color:var(--danger);font-size:12px;">🗑 삭제</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 랜덤뽑기 뷰 -->
@@ -1482,11 +1595,11 @@ function renderFileGrid() {
     if (!f) return;
     card.addEventListener('click', () => openFilePreview(f));
   });
-  // 썸네일: drive.google.com/thumbnail은 브라우저 Google 세션으로 직접 로딩 가능
+  // 썸네일: 로컬 API에서 직접 로딩
   list.forEach(f => {
     const img = grid.querySelector(`.file-card[data-id="${f.id}"] .thumb img`);
     if (!img) return;
-    img.src = `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`;
+    img.src = `${LOCAL_API}/api/files/${f.id}/media`;
     img.onerror = () => { img.style.display = 'none'; };
   });
 }
@@ -1512,7 +1625,6 @@ async function openFilePreview(f) {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <div style="font-weight:700; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</div>
       <div style="display:flex; gap:6px;">
-        <a class="btn ghost" href="${escapeHtml(f.webViewLink)}" target="_blank" rel="noopener">Drive에서 열기 ↗</a>
         <button class="btn ghost" id="dlBtn">⬇ 다운로드</button>
         <button class="btn ghost" id="delBtn" style="color:var(--danger)">🗑 삭제</button>
         <button class="btn ghost" data-close>닫기 ×</button>
@@ -1522,7 +1634,7 @@ async function openFilePreview(f) {
   `);
   $('[data-close]').addEventListener('click', closeModal);
   $('#delBtn').addEventListener('click', async () => {
-    if (!confirm('Drive에서 삭제할까요? (휴지통으로 이동)')) return;
+    if (!confirm('삭제할까요?')) return;
     try {
       await deleteDriveFile(f.id);
       toast('삭제됨', 'success');
@@ -1533,28 +1645,19 @@ async function openFilePreview(f) {
       toast('삭제 실패', 'error');
     }
   });
-  $('#dlBtn').addEventListener('click', async () => {
-    const url = await fetchDriveMediaUrl(f.id);
-    if (!url) { toast('다운로드 실패', 'error'); return; }
+  const mediaUrl = `${LOCAL_API}/api/files/${f.id}/media`;
+  $('#dlBtn').addEventListener('click', () => {
     const a = document.createElement('a');
-    a.href = url; a.download = f.name; a.click();
+    a.href = mediaUrl; a.download = f.name; a.click();
   });
 
-  try {
-    const url = await fetchDriveMediaUrl(f.id);
-    if (!url) throw new Error('media fetch failed');
-    const slot = $('#previewSlot');
-    if (!slot) return;
-    if (/^image\//.test(f.mimeType)) {
-      slot.innerHTML = `<img class="preview-media" src="${url}" />`;
-    } else if (/^video\//.test(f.mimeType)) {
-      slot.innerHTML = `<video class="preview-media" src="${url}" controls autoplay></video>`;
-    } else {
-      slot.innerHTML = `<div>이 파일 형식은 미리보기 미지원 — Drive에서 열어보세요</div>`;
-    }
-  } catch (e) {
-    const slot = $('#previewSlot');
-    if (slot) slot.textContent = '미리보기 로딩 실패';
+  const slot = $('#previewSlot');
+  if (/^image\//.test(f.mimeType)) {
+    slot.innerHTML = `<img class="preview-media" src="${mediaUrl}" />`;
+  } else if (/^video\//.test(f.mimeType)) {
+    slot.innerHTML = `<video class="preview-media" src="${mediaUrl}" controls autoplay></video>`;
+  } else {
+    slot.innerHTML = `<div>미리보기 미지원 형식</div>`;
   }
 }
 
@@ -1566,15 +1669,17 @@ function switchTab(tab) {
   const btn = document.querySelector(`.tabs button[data-tab="${tab}"]`);
   if (btn) btn.classList.add('active');
   activeTab = tab;
-  $('#scheduleView').style.display   = tab === 'schedule'   ? 'block' : 'none';
-  $('#tasksView').style.display      = tab === 'tasks'      ? 'block' : 'none';
-  $('#minutesView').style.display    = tab === 'minutes'    ? 'block' : 'none';
-  $('#referenceView').style.display  = tab === 'reference'  ? 'block' : 'none';
-  $('#filevaultView').style.display  = tab === 'filevault'  ? 'block' : 'none';
-  $('#randomView').style.display     = tab === 'random'     ? 'block' : 'none';
-  if (tab === 'schedule')  renderContentSchedule();
-  if (tab === 'tasks')     renderTasks();
-  if (tab === 'minutes')   renderMinutes();
+  $('#scheduleView').style.display      = tab === 'schedule'    ? 'block' : 'none';
+  $('#tasksView').style.display         = tab === 'tasks'       ? 'block' : 'none';
+  $('#minutesView').style.display       = tab === 'minutes'     ? 'block' : 'none';
+  $('#seminotionView').style.display    = tab === 'seminotion'  ? 'block' : 'none';
+  $('#referenceView').style.display     = tab === 'reference'   ? 'block' : 'none';
+  $('#filevaultView').style.display     = tab === 'filevault'   ? 'block' : 'none';
+  $('#randomView').style.display        = tab === 'random'      ? 'block' : 'none';
+  if (tab === 'schedule')   renderContentSchedule();
+  if (tab === 'tasks')      renderTasks();
+  if (tab === 'minutes')    renderMinutes();
+  if (tab === 'seminotion') renderNoteList();
   if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
@@ -2261,6 +2366,178 @@ function openMinuteModal(item) {
     toast(isEdit ? '수정됨!' : '회의록 저장됨!', 'success');
   });
 }
+
+/* ============================================================
+ * 세미 노션
+ * ============================================================ */
+let activeNoteId = null;
+let noteAutoSaveTimer = null;
+
+function getNotes() {
+  return teamItems
+    .filter(x => x.type === 'note')
+    .sort((a, b) => (b.data.updated_at || b.created_at || '').localeCompare(a.data.updated_at || a.created_at || ''));
+}
+
+function renderNoteList() {
+  const list = $('#noteList');
+  if (!list) return;
+  const notes = getNotes();
+  if (notes.length === 0) {
+    list.innerHTML = `<div style="padding:16px;text-align:center;font-size:12px;color:var(--muted);">노트가 없어요<br>위 버튼으로 만들어보세요!</div>`;
+    return;
+  }
+  list.innerHTML = notes.map(n => {
+    const d = n.data;
+    const isActive = n.id === activeNoteId;
+    const dateStr = (d.updated_at || n.created_at || '').slice(0, 10);
+    return `
+      <div class="note-list-item ${isActive ? 'active' : ''}" data-noteid="${n.id}">
+        <div class="nli-title">${escapeHtml(d.title || '제목 없음')}</div>
+        <div class="nli-date">${dateStr}</div>
+      </div>`;
+  }).join('');
+  list.querySelectorAll('.note-list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const note = teamItems.find(x => x.id === item.dataset.noteid);
+      if (note) openNote(note);
+    });
+  });
+}
+
+function openNote(item) {
+  // 기존 편집 중인 노트 먼저 저장
+  if (activeNoteId && activeNoteId !== item.id) {
+    flushNoteAutoSave();
+  }
+  activeNoteId = item.id;
+  const d = item.data;
+  const empty = $('#snoteEmpty');
+  const wrap = $('#snoteEditorWrap');
+  if (empty) empty.style.display = 'none';
+  if (wrap) wrap.style.display = 'flex';
+
+  const titleEl = $('#snoteTitle');
+  const contentEl = $('#snoteContent');
+  if (titleEl) titleEl.value = d.title || '';
+  if (contentEl) contentEl.innerHTML = d.content || '<p></p>';
+
+  renderNoteList();
+
+  // 자동 저장 연결
+  if (titleEl) {
+    titleEl.oninput = () => scheduleNoteAutoSave();
+  }
+  if (contentEl) {
+    contentEl.oninput = () => scheduleNoteAutoSave();
+  }
+}
+
+function scheduleNoteAutoSave() {
+  clearTimeout(noteAutoSaveTimer);
+  const status = $('#snoteSaveStatus');
+  if (status) status.textContent = '저장 중…';
+  noteAutoSaveTimer = setTimeout(() => flushNoteAutoSave(), 800);
+}
+
+async function flushNoteAutoSave() {
+  clearTimeout(noteAutoSaveTimer);
+  if (!activeNoteId) return;
+  const titleEl = $('#snoteTitle');
+  const contentEl = $('#snoteContent');
+  if (!titleEl || !contentEl) return;
+  const title = titleEl.value.trim() || '제목 없음';
+  const content = contentEl.innerHTML;
+  const updated_at = new Date().toISOString();
+  const ok = await updateTeamItem(activeNoteId, { title, content, updated_at });
+  const status = $('#snoteSaveStatus');
+  if (status) status.textContent = ok ? '저장됨 ✓' : '저장 실패';
+  renderNoteList();
+}
+
+$('#addNoteBtn')?.addEventListener('click', async () => {
+  await flushNoteAutoSave();
+  const newNote = await addTeamItem('note', {
+    title: '새 노트',
+    content: '<p></p>',
+    updated_at: new Date().toISOString(),
+  });
+  if (!newNote) return;
+  openNote(newNote);
+  const titleEl = $('#snoteTitle');
+  if (titleEl) { titleEl.focus(); titleEl.select(); }
+});
+
+$('#snoteDeleteBtn')?.addEventListener('click', async () => {
+  if (!activeNoteId) return;
+  if (!confirm('이 노트를 삭제할까요?')) return;
+  await deleteTeamItem(activeNoteId);
+  activeNoteId = null;
+  const empty = $('#snoteEmpty');
+  const wrap = $('#snoteEditorWrap');
+  if (empty) empty.style.display = 'flex';
+  if (wrap) wrap.style.display = 'none';
+  renderNoteList();
+  toast('삭제됨');
+});
+
+// 세미 노션 툴바
+$('#snoteToolbar')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-scmd]');
+  if (!btn) return;
+  const cmd = btn.dataset.scmd;
+  const contentEl = $('#snoteContent');
+  if (!contentEl) return;
+  contentEl.focus();
+  if (cmd === 'bold') document.execCommand('bold');
+  else if (cmd === 'italic') document.execCommand('italic');
+  else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
+  else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
+  else if (cmd === 'h3') document.execCommand('formatBlock', false, 'h3');
+  else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+  else if (cmd === 'ol') document.execCommand('insertOrderedList');
+  else if (cmd === 'img') { snoteImgPendingGrid = false; $('#snote-img-input').click(); }
+  else if (cmd === 'grid') { snoteImgPendingGrid = true; $('#snote-img-input').multiple = true; $('#snote-img-input').click(); }
+  else if (cmd === 'toggle') {
+    const sel = window.getSelection();
+    const text = sel && sel.toString().trim() ? sel.toString() : '접기/펼치기 제목';
+    document.execCommand('insertHTML', false, `<details><summary>${text}</summary><p>내용을 입력하세요</p></details><p></p>`);
+  }
+});
+
+// 세미 노션 이미지
+let snoteImgPendingGrid = false;
+$('#snote-img-input')?.addEventListener('change', async () => {
+  const files = Array.from($('#snote-img-input').files);
+  if (!files.length) return;
+  const contentEl = $('#snoteContent');
+  if (!contentEl) return;
+  contentEl.focus();
+  function toDataURL(file) {
+    return new Promise(resolve => {
+      const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file);
+    });
+  }
+  if (snoteImgPendingGrid && files.length >= 2) {
+    let imgs = '';
+    for (const f of files) { const url = await toDataURL(f); imgs += `<img src="${url}" />`; }
+    document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
+  } else {
+    for (const f of files) {
+      const url = await toDataURL(f);
+      document.execCommand('insertHTML', false, `<img src="${url}" /><p></p>`);
+    }
+  }
+  $('#snote-img-input').value = '';
+  scheduleNoteAutoSave();
+});
+
+// 세미 노션 키보드 단축키
+$('#snoteContent')?.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); flushNoteAutoSave(); }
+});
 
 /* ============================================================
  * 전체 렌더
