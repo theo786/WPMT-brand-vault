@@ -266,6 +266,8 @@
   }
   .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tabs button:hover { color: var(--text); }
+  .tabs button.tab-dragging { opacity: 0.35; }
+  .tabs button.tab-drag-over { border-left: 2px solid var(--accent); }
 
   /* === 카테고리 사이드 === */
   .cats-row {
@@ -1868,6 +1870,60 @@ function switchTab(tab) {
 }
 
 $$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+// 탭 드래그앤드랍 순서 변경
+(function() {
+  const tabsEl = document.querySelector('.tabs');
+  if (!tabsEl) return;
+
+  function saveTabOrder() {
+    const order = [...tabsEl.querySelectorAll('button[data-tab]')].map(b => b.dataset.tab);
+    localStorage.setItem('wpmt_tab_order', JSON.stringify(order));
+  }
+
+  function applyTabOrder() {
+    const saved = JSON.parse(localStorage.getItem('wpmt_tab_order') || 'null');
+    if (!saved) return;
+    saved.forEach(tabId => {
+      const btn = tabsEl.querySelector(`button[data-tab="${tabId}"]`);
+      if (btn) tabsEl.appendChild(btn);
+    });
+  }
+
+  applyTabOrder();
+
+  let dragSrc = null;
+
+  tabsEl.querySelectorAll('button[data-tab]').forEach(btn => {
+    btn.draggable = true;
+    btn.addEventListener('dragstart', (e) => {
+      dragSrc = btn;
+      btn.classList.add('tab-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    btn.addEventListener('dragend', () => {
+      btn.classList.remove('tab-dragging');
+      tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('tab-drag-over'));
+      saveTabOrder();
+    });
+    btn.addEventListener('dragover', (e) => {
+      if (!dragSrc || dragSrc === btn) return;
+      e.preventDefault();
+      tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('tab-drag-over'));
+      btn.classList.add('tab-drag-over');
+    });
+    btn.addEventListener('drop', (e) => {
+      if (!dragSrc || dragSrc === btn) return;
+      e.preventDefault();
+      const btns = [...tabsEl.querySelectorAll('button[data-tab]')];
+      const fromIdx = btns.indexOf(dragSrc);
+      const toIdx = btns.indexOf(btn);
+      if (fromIdx < toIdx) btn.after(dragSrc);
+      else btn.before(dragSrc);
+      btn.classList.remove('tab-drag-over');
+    });
+  });
+})();
 
 $('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
 $('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
