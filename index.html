@@ -722,6 +722,30 @@
     padding-top: 10px; border-top: 1px solid var(--border); margin-top: 10px;
     flex-shrink: 0;
   }
+  .snote-layout.fullscreen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh; z-index: 900;
+    border-radius: 0; border: none;
+  }
+  .img-resize-handle {
+    position: absolute; inset: 0; cursor: pointer;
+  }
+  .rich-editor .img-wrap {
+    display: inline-block; position: relative; margin: 6px 0;
+  }
+  .rich-editor .img-wrap img {
+    display: block; border-radius: 8px; height: auto;
+  }
+  .img-width-popup {
+    position: absolute; top: -38px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 8px; display: flex; align-items: center; gap: 6px; z-index: 10;
+    white-space: nowrap; font-size: 12px;
+  }
+  .img-width-popup input {
+    width: 60px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text); padding: 2px 6px; font-size: 12px; text-align: center;
+  }
   @media (max-width: 700px) {
     .snote-layout { grid-template-columns: 1fr; }
     .snote-sidebar { display: none; }
@@ -890,6 +914,8 @@
               <button data-scmd="img" title="이미지 삽입 (드래그도 가능)">🖼 이미지</button>
               <button data-scmd="grid" title="이미지 2열 그리드">⊞ 그리드</button>
               <button data-scmd="toggle" title="접기/펼치기 블록">▶ 접기</button>
+              <div class="sep"></div>
+              <button id="snoteFullscreenBtn" title="풀스크린 (⌘⇧F)">⛶</button>
             </div>
             <div class="rich-editor snote-rich" id="snoteContent" contenteditable="true"></div>
             <input type="file" id="snote-img-input" accept="image/*" multiple style="display:none" />
@@ -2670,12 +2696,12 @@ $('#snote-img-input')?.addEventListener('change', async () => {
   }
   if (snoteImgPendingGrid && files.length >= 2) {
     let imgs = '';
-    for (const f of files) { const url = await toDataURL(f); imgs += `<img src="${url}" />`; }
+    for (const f of files) { const url = await toDataURL(f); imgs += `<img src="${url}" style="width:100%;height:auto;" />`; }
     document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
   } else {
     for (const f of files) {
       const url = await toDataURL(f);
-      document.execCommand('insertHTML', false, `<img src="${url}" /><p></p>`);
+      document.execCommand('insertHTML', false, `<span class="img-wrap" contenteditable="false"><img src="${url}" style="width:280px;height:auto;" /></span><p></p>`);
     }
   }
   $('#snote-img-input').value = '';
@@ -2694,15 +2720,22 @@ $('#snoteContent')?.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '7') { e.preventDefault(); document.execCommand('insertOrderedList'); }
 });
 
-// 세미 노션 이미지 드래그앤드랍
+// 세미 노션 이미지 드래그앤드랍 + 리사이즈
 (function() {
   const el = $('#snoteContent');
   if (!el) return;
+
   function toDataURL(file) {
     return new Promise(resolve => {
       const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file);
     });
   }
+
+  function insertSmallImg(url) {
+    const html = `<span class="img-wrap" contenteditable="false"><img src="${url}" style="width:280px;height:auto;" /></span><p></p>`;
+    document.execCommand('insertHTML', false, html);
+  }
+
   el.addEventListener('dragover', (e) => {
     if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); el.classList.add('drag-over'); }
   });
@@ -2713,15 +2746,66 @@ $('#snoteContent')?.addEventListener('keydown', (e) => {
     e.preventDefault();
     el.classList.remove('drag-over');
     el.focus();
-    if (files.length >= 2) {
-      let imgs = '';
-      for (const f of files) { const url = await toDataURL(f); imgs += `<img src="${url}" />`; }
-      document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
-    } else {
-      const url = await toDataURL(files[0]);
-      document.execCommand('insertHTML', false, `<img src="${url}" /><p></p>`);
+    for (const f of files) {
+      const url = await toDataURL(f);
+      insertSmallImg(url);
     }
     scheduleNoteAutoSave();
+  });
+
+  // 이미지 클릭 → 가로 픽셀 조정 팝업
+  el.addEventListener('click', (e) => {
+    const img = e.target.closest('.img-wrap img') || (e.target.tagName === 'IMG' && !e.target.closest('.img-grid') ? e.target : null);
+    if (!img) { closeImgPopup(); return; }
+    e.preventDefault();
+    showImgPopup(img);
+  });
+
+  let activePopup = null;
+  function closeImgPopup() {
+    if (activePopup) { activePopup.remove(); activePopup = null; }
+  }
+  function showImgPopup(img) {
+    closeImgPopup();
+    const wrap = img.closest('.img-wrap') || img.parentNode;
+    const popup = document.createElement('div');
+    popup.className = 'img-width-popup';
+    const curW = img.style.width ? parseInt(img.style.width) : img.naturalWidth || 280;
+    popup.innerHTML = `<span>가로</span><input type="number" value="${curW}" min="50" max="1200" step="10" /><span>px</span><button style="background:var(--accent);color:#000;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">적용</button>`;
+    wrap.style.position = 'relative';
+    wrap.appendChild(popup);
+    activePopup = popup;
+    const input = popup.querySelector('input');
+    const btn = popup.querySelector('button');
+    input.focus(); input.select();
+    const apply = () => {
+      const v = parseInt(input.value);
+      if (v >= 50 && v <= 1200) { img.style.width = v + 'px'; img.style.height = 'auto'; }
+      closeImgPopup();
+      scheduleNoteAutoSave();
+    };
+    btn.addEventListener('click', apply);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') apply(); if (e.key === 'Escape') closeImgPopup(); });
+    setTimeout(() => document.addEventListener('click', function outsideClick(ev) {
+      if (!popup.contains(ev.target) && ev.target !== img) { closeImgPopup(); document.removeEventListener('click', outsideClick); }
+    }), 50);
+  }
+})();
+
+// 풀스크린 토글
+(function() {
+  const layout = document.querySelector('.snote-layout');
+  const btn = $('#snoteFullscreenBtn');
+  if (!btn || !layout) return;
+  function toggle() {
+    const on = layout.classList.toggle('fullscreen');
+    btn.textContent = on ? '✕' : '⛶';
+    btn.title = on ? '풀스크린 종료 (ESC)' : '풀스크린 (⌘⇧F)';
+  }
+  btn.addEventListener('click', toggle);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && layout.classList.contains('fullscreen')) toggle();
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') { e.preventDefault(); toggle(); }
   });
 })();
 
