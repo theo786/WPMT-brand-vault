@@ -788,6 +788,7 @@
       <button data-tab="reference">🎨 레퍼런스</button>
       <button data-tab="filevault">📂 파일보관함</button>
       <button data-tab="random">✨ 랜덤뽑기</button>
+      <button data-tab="notion">📓 노션</button>
     </div>
 
     <!-- 콘텐츠 스케줄 뷰 -->
@@ -920,6 +921,15 @@
 
   </div>
 </div>
+
+    <!-- 노션 링크 뷰 -->
+    <section id="notionView" style="display:none">
+      <div class="section-header" style="margin-bottom:14px;">
+        <h2>📓 노션 링크</h2>
+        <button class="btn-primary" id="addNotionBtn">+ 추가</button>
+      </div>
+      <div id="notionList" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </section>
 
 <!-- 모달 -->
 <div class="modal-bg" id="modalBg">
@@ -1814,10 +1824,12 @@ function switchTab(tab) {
   $('#referenceView').style.display     = tab === 'reference'   ? 'block' : 'none';
   $('#filevaultView').style.display     = tab === 'filevault'   ? 'block' : 'none';
   $('#randomView').style.display        = tab === 'random'      ? 'block' : 'none';
+  $('#notionView').style.display        = tab === 'notion'      ? 'block' : 'none';
   if (tab === 'schedule')   renderContentSchedule();
   if (tab === 'tasks')      renderTasks();
   if (tab === 'minutes')    renderMinutes();
   if (tab === 'seminotion') renderNoteList();
+  if (tab === 'notion')     renderNotionList();
   if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
@@ -2675,7 +2687,43 @@ $('#snoteContent')?.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
   if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
   if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); flushNoteAutoSave(); }
+  if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '1') { e.preventDefault(); document.execCommand('formatBlock', false, 'h1'); }
+  if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '2') { e.preventDefault(); document.execCommand('formatBlock', false, 'h2'); }
+  if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '3') { e.preventDefault(); document.execCommand('formatBlock', false, 'h3'); }
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '8') { e.preventDefault(); document.execCommand('insertUnorderedList'); }
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '7') { e.preventDefault(); document.execCommand('insertOrderedList'); }
 });
+
+// 세미 노션 이미지 드래그앤드랍
+(function() {
+  const el = $('#snoteContent');
+  if (!el) return;
+  function toDataURL(file) {
+    return new Promise(resolve => {
+      const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file);
+    });
+  }
+  el.addEventListener('dragover', (e) => {
+    if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); el.classList.add('drag-over'); }
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', async (e) => {
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    el.focus();
+    if (files.length >= 2) {
+      let imgs = '';
+      for (const f of files) { const url = await toDataURL(f); imgs += `<img src="${url}" />`; }
+      document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
+    } else {
+      const url = await toDataURL(files[0]);
+      document.execCommand('insertHTML', false, `<img src="${url}" /><p></p>`);
+    }
+    scheduleNoteAutoSave();
+  });
+})();
 
 /* ============================================================
  * 전체 렌더
@@ -2688,6 +2736,85 @@ function renderAll() {
   updateFileCounts();
   renderContentSchedule();
 }
+
+/* ============================================================
+ * 노션 링크
+ * ============================================================ */
+function getNotionLinks() {
+  try { return JSON.parse(localStorage.getItem('wpmt_notion_links') || '[]'); } catch { return []; }
+}
+function saveNotionLinks(links) {
+  localStorage.setItem('wpmt_notion_links', JSON.stringify(links));
+}
+
+function renderNotionList() {
+  const links = getNotionLinks();
+  const el = $('#notionList');
+  if (!el) return;
+  if (links.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">📓 노션 링크를 추가해보세요</div>`;
+    return;
+  }
+  el.innerHTML = links.map((item, i) => `
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:22px;flex-shrink:0;">📄</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.title || '제목 없음')}</div>
+        <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.url)}</div>
+        ${item.desc ? `<div style="font-size:12px;color:var(--text);margin-top:4px;opacity:0.8;">${escapeHtml(item.desc)}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn ghost" style="font-size:12px;" onclick="window.open('${escapeHtml(item.url)}','_blank')">열기 ↗</button>
+        <button class="btn ghost" style="font-size:12px;color:var(--muted);" onclick="editNotionLink(${i})">✏️</button>
+        <button class="btn ghost" style="font-size:12px;color:var(--danger);" onclick="deleteNotionLink(${i})">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openNotionModal(idx = -1) {
+  const links = getNotionLinks();
+  const item = idx >= 0 ? links[idx] : { title: '', url: '', desc: '' };
+  openModal(`
+    <h3 style="margin:0 0 16px;font-size:16px;">${idx >= 0 ? '✏️ 링크 수정' : '📓 노션 링크 추가'}</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <input id="nl-title" class="input" placeholder="페이지 제목 (예: 콘텐츠 기획 마스터)" value="${escapeHtml(item.title)}" />
+      <input id="nl-url" class="input" placeholder="https://www.notion.so/..." value="${escapeHtml(item.url)}" />
+      <input id="nl-desc" class="input" placeholder="설명 (선택)" value="${escapeHtml(item.desc || '')}" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+      <button class="btn ghost" data-close>취소</button>
+      <button class="btn-primary" id="nlSaveBtn">${idx >= 0 ? '수정' : '추가'}</button>
+    </div>
+  `);
+  $('[data-close]').addEventListener('click', closeModal);
+  $('#nl-title').focus();
+  $('#nlSaveBtn').addEventListener('click', () => {
+    const title = $('#nl-title').value.trim();
+    const url = $('#nl-url').value.trim();
+    const desc = $('#nl-desc').value.trim();
+    if (!url) { toast('URL을 입력해주세요', 'error'); return; }
+    const links = getNotionLinks();
+    if (idx >= 0) links[idx] = { title: title || url, url, desc };
+    else links.unshift({ title: title || url, url, desc });
+    saveNotionLinks(links);
+    closeModal();
+    renderNotionList();
+    toast(idx >= 0 ? '수정됨' : '추가됨', 'success');
+  });
+}
+
+window.editNotionLink = (i) => openNotionModal(i);
+window.deleteNotionLink = (i) => {
+  if (!confirm('삭제할까요?')) return;
+  const links = getNotionLinks();
+  links.splice(i, 1);
+  saveNotionLinks(links);
+  renderNotionList();
+  toast('삭제됨');
+};
+
+$('#addNotionBtn')?.addEventListener('click', () => openNotionModal());
 
 /* ============================================================
  * 미션 배너
