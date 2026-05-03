@@ -762,8 +762,8 @@
   <header class="topbar">
     <div class="brand">WIMP MATTER. STUDIO</div>
     <div class="topbar-right">
-      <div class="drive-status on" id="driveStatus" title="로컬 저장소 (GoogleDrive 마운트)">
-        <span class="dot"></span><span id="driveLabel">Drive 연결됨</span>
+      <div class="drive-status" id="driveStatus" title="Drive 미연결 — 클릭하여 연결" style="cursor:pointer;">
+        <span class="dot"></span><span id="driveLabel">Drive 연결 중…</span>
       </div>
       <span class="sync-dot" id="syncDot"></span>
       <span class="user-email" id="userEmail"></span>
@@ -931,6 +931,7 @@
 
 <!-- Google Identity Services 제거 (로컬 API로 대체) -->
 
+<script src="https://accounts.google.com/gsi/client" async></script>
 <script type="importmap">
 {
   "imports": {
@@ -949,7 +950,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const CATEGORIES = ['이미지 프롬프트', '콘텐츠 아이디어', '관련 서비스', '굿즈', 'AI ETC'];
-const LOCAL_API = 'http://127.0.0.1:8002';
+const LOCAL_API = window.location.origin;
 
 const IG_DOWNLOADER_URL = 'http://127.0.0.1:8000';
 const YT_DOWNLOADER_URL = 'http://127.0.0.1:8001';
@@ -1222,61 +1223,181 @@ async function initApp(user) {
   await Promise.all([Storage.pull(), loadTeamBoard()]);
   renderAll();
   renderMission();
-  setTimeout(() => refreshDriveFiles(), 500);
+  setTimeout(() => tryAutoConnectDrive(), 500);
 }
 
 /* ============================================================
- * 로컬 파일 API (rclone GoogleDrive 마운트 사용)
+ * Google Drive API (GIS 자동 연결)
  * ============================================================ */
-function isDriveConnected() { return true; } // 항상 연결됨
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FOLDER_NAME = 'WPMT-Brand-Vault';
+
+let driveToken = null;   // { access_token, expires_at }
+let driveConnected = false;
+const mediaCache = new Map();
+
+function getDriveClientId() { return localStorage.getItem('wpmt_drive_client_id') || ''; }
+function setDriveClientId(id) { localStorage.setItem('wpmt_drive_client_id', id.trim()); }
+
+function updateDriveStatus(connected, label) {
+  driveConnected = connected;
+  const el = $('#driveStatus');
+  el.className = 'drive-status' + (connected ? ' on' : '');
+  el.title = connected ? 'Drive 연결됨 — 클릭하여 새로고침' : 'Drive 미연결 — 클릭하여 연결';
+  $('#driveLabel').textContent = label || (connected ? 'Drive 연결됨' : 'Drive 미연결');
+}
+
+function isDriveConnected() { return driveConnected; }
+
+function ensureDriveToken(forcePopup = false) {
+  if (!forcePopup && driveToken && Date.now() < driveToken.expires_at) {
+    return Promise.resolve(driveToken.access_token);
+  }
+  const clientId = getDriveClientId();
+  if (!clientId) return Promise.reject(new Error('no_client_id'));
+  return new Promise((resolve, reject) => {
+    if (!window.google?.accounts?.oauth2) { reject(new Error('gis_not_loaded')); return; }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: DRIVE_SCOPE,
+      callback: (resp) => {
+        if (resp.error) { reject(new Error(resp.error)); return; }
+        driveToken = {
+          access_token: resp.access_token,
+          expires_at: Date.now() + (parseInt(resp.expires_in) - 60) * 1000,
+        };
+        resolve(driveToken.access_token);
+      },
+    });
+    client.requestAccessToken({ prompt: forcePopup ? 'consent' : '' });
+  });
+}
+
+async function tryAutoConnectDrive() {
+  const clientId = getDriveClientId();
+  if (!clientId) { updateDriveStatus(false, 'Drive 미연결'); return; }
+  updateDriveStatus(false, '연결 중…');
+  try {
+    await ensureDriveToken(false);
+    updateDriveStatus(true, 'Drive 연결됨');
+    refreshDriveFiles();
+  } catch (e) {
+    updateDriveStatus(false, 'Drive — 클릭하여 연결');
+  }
+}
+
+async function driveRequest(url, options = {}) {
+  const token = await ensureDriveToken(false);
+  const res = await fetch(url, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}`, ...options.headers },
+  });
+  if (res.status === 401) {
+    driveToken = null;
+    const t2 = await ensureDriveToken(false);
+    return fetch(url, { ...options, headers: { Authorization: `Bearer ${t2}`, ...options.headers } });
+  }
+  return res;
+}
+
+async function getDriveFolderId() {
+  if (driveFolderId) return driveFolderId;
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await driveRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+  const { files } = await r.json();
+  if (files?.length) { driveFolderId = files[0].id; return driveFolderId; }
+  const cr = await driveRequest('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }),
+  });
+  const folder = await cr.json();
+  driveFolderId = folder.id;
+  return driveFolderId;
+}
 
 async function uploadFileToDrive(file, onProgress) {
-  const fd = new FormData();
-  fd.append('file', file);
+  const folderId = await getDriveFolderId();
+  const token = await ensureDriveToken(false);
+  const meta = { name: file.name, parents: [folderId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', file);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${LOCAL_API}/api/files/upload`);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
-    };
+    xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,createdTime,thumbnailLink,webViewLink');
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
       else reject(new Error('upload failed: ' + xhr.status));
     };
-    xhr.onerror = () => reject(new Error('upload network error'));
-    xhr.send(fd);
+    xhr.onerror = () => reject(new Error('network error'));
+    xhr.send(form);
   });
 }
 
 async function listDriveFiles() {
-  const r = await fetch(`${LOCAL_API}/api/files`);
-  const j = await r.json();
-  driveFiles = j.files || [];
+  const folderId = await getDriveFolderId();
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const r = await driveRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,createdTime,thumbnailLink,webViewLink)&orderBy=createdTime%20desc&pageSize=100`);
+  const { files } = await r.json();
+  driveFiles = files || [];
   return driveFiles;
 }
 
 async function deleteDriveFile(fileId) {
-  await fetch(`${LOCAL_API}/api/files/${fileId}`, { method: 'DELETE' });
+  await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE' });
+  mediaCache.delete(fileId);
   driveFiles = driveFiles.filter(f => f.id !== fileId);
 }
 
 async function fetchDriveMediaUrl(fileId) {
-  return `${LOCAL_API}/api/files/${fileId}/media`;
+  if (mediaCache.has(fileId)) return mediaCache.get(fileId);
+  const token = await ensureDriveToken(false);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  mediaCache.set(fileId, url);
+  return url;
 }
 
 async function refreshDriveFiles() {
+  if (!driveConnected) return;
   try {
     await listDriveFiles();
     renderFileGrid();
     updateFileCounts();
   } catch (e) {
-    console.error(e);
+    console.error('Drive refresh error:', e);
   }
 }
 
-$('#driveStatus').addEventListener('click', () => {
-  refreshDriveFiles();
-  toast('파일 새로고침', 'success');
+$('#driveStatus').addEventListener('click', async () => {
+  if (driveConnected) {
+    refreshDriveFiles();
+    toast('파일 새로고침', 'success');
+    return;
+  }
+  let clientId = getDriveClientId();
+  if (!clientId) {
+    clientId = prompt('Google OAuth Client ID를 입력하세요\n(Google Cloud Console → 사용자 인증 정보에서 복사)');
+    if (!clientId?.trim()) return;
+    setDriveClientId(clientId);
+    driveFolderId = null;
+  }
+  try {
+    updateDriveStatus(false, '연결 중…');
+    await ensureDriveToken(true);
+    updateDriveStatus(true, 'Drive 연결됨');
+    await refreshDriveFiles();
+    toast('Drive 연결됨', 'success');
+  } catch (e) {
+    updateDriveStatus(false, 'Drive — 클릭하여 연결');
+    toast('Drive 연결 실패', 'error');
+  }
 });
 
 $('#refreshFilesBtn').addEventListener('click', () => {
@@ -1431,12 +1552,16 @@ function showRandomBookmark(bk) {
   const result = $('#randomResult');
   result.style.cursor = 'pointer';
   result.onclick = () => window.open(bk.url, '_blank');
+  const notesHtml = bk.notes
+    ? `<div style="margin:10px auto 0; max-width:320px; background:var(--panel-2); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--text); text-align:left; white-space:pre-wrap; word-break:break-word;">${escapeHtml(bk.notes)}</div>`
+    : '';
   result.innerHTML = `
     <div style="padding:16px; text-align:center;">
       <div style="font-size:28px; margin-bottom:8px;">🔖</div>
-      <div style="font-weight:700; font-size:15px; margin-bottom:4px;">${escapeHtml(bk.title || bk.url)}</div>
-      <div style="font-size:11px; color:var(--muted); margin-bottom:10px;">${escapeHtml(bk.category || '')}</div>
-      <a href="${escapeHtml(bk.url)}" target="_blank" style="color:var(--accent); font-size:12px; word-break:break-all;">${escapeHtml(bk.url)}</a>
+      <div style="font-weight:700; font-size:15px; margin-bottom:4px;">${escapeHtml(bk.name || bk.url)}</div>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">${escapeHtml(bk.category || '')}</div>
+      ${notesHtml}
+      <a href="${escapeHtml(bk.url)}" target="_blank" style="display:inline-block; margin-top:10px; color:var(--accent); font-size:12px; word-break:break-all;">${escapeHtml(bk.url)}</a>
     </div>`;
 }
 
@@ -1604,12 +1729,16 @@ function renderFileGrid() {
     if (!f) return;
     card.addEventListener('click', () => openFilePreview(f));
   });
-  // 썸네일: 로컬 API에서 직접 로딩
+  // 썸네일 로딩
   list.forEach(f => {
     const img = grid.querySelector(`.file-card[data-id="${f.id}"] .thumb img`);
     if (!img) return;
-    img.src = `${LOCAL_API}/api/files/${f.id}/media`;
-    img.onerror = () => { img.style.display = 'none'; };
+    if (f.thumbnailLink) {
+      img.src = f.thumbnailLink;
+      img.onerror = () => { img.style.display = 'none'; };
+    } else {
+      fetchDriveMediaUrl(f.id).then(url => { img.src = url; }).catch(() => { img.style.display = 'none'; });
+    }
   });
 }
 
@@ -1654,20 +1783,20 @@ async function openFilePreview(f) {
       toast('삭제 실패', 'error');
     }
   });
-  const mediaUrl = `${LOCAL_API}/api/files/${f.id}/media`;
-  $('#dlBtn').addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.href = mediaUrl; a.download = f.name; a.click();
-  });
-
   const slot = $('#previewSlot');
-  if (/^image\//.test(f.mimeType)) {
-    slot.innerHTML = `<img class="preview-media" src="${mediaUrl}" />`;
-  } else if (/^video\//.test(f.mimeType)) {
-    slot.innerHTML = `<video class="preview-media" src="${mediaUrl}" controls autoplay></video>`;
-  } else {
-    slot.innerHTML = `<div>미리보기 미지원 형식</div>`;
-  }
+  fetchDriveMediaUrl(f.id).then(mediaUrl => {
+    $('#dlBtn').addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = mediaUrl; a.download = f.name; a.click();
+    });
+    if (/^image\//.test(f.mimeType)) {
+      slot.innerHTML = `<img class="preview-media" src="${mediaUrl}" />`;
+    } else if (/^video\//.test(f.mimeType)) {
+      slot.innerHTML = `<video class="preview-media" src="${mediaUrl}" controls autoplay></video>`;
+    } else {
+      slot.innerHTML = `<div>미리보기 미지원 형식</div>`;
+    }
+  }).catch(() => { slot.innerHTML = `<div>미리보기 실패</div>`; });
 }
 
 /* ============================================================

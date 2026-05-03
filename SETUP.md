@@ -80,21 +80,19 @@ create policy "wpmt own delete" on public.wpmt_brand_vault
 
 ## 3. 로컬 실행
 
-파일 업로드/관리는 `server.py` (FastAPI) 를 통해 로컬에서 처리합니다. Google Drive 불필요.
-
 ```bash
 cd 클로드코드/WPMT-brand-vault
-
-# 패키지 설치 (최초 1회)
-pip install fastapi uvicorn python-multipart
-
-# 서버 실행
-uvicorn server:app --port 8080 --reload
+python3 -m http.server 8080
 ```
 
 브라우저에서 [http://localhost:8080](http://localhost:8080) 열기.
 
-파일 저장 위치: `~/GoogleDrive/WPMT-Brand-Vault/`
+**Drive 연결 (최초 1회만)**
+- 처음 접속 시 상단 "Drive 연결 중…" 클릭
+- Google OAuth Client ID 입력 (Google Cloud Console에서 복사)
+- Google 계정 권한 승인 팝업 → 한 번만 허용
+
+이후부터는 앱 열면 자동으로 Drive 연결됩니다. 파일은 Google Drive `WPMT-Brand-Vault` 폴더에 저장됩니다.
 
 ---
 
@@ -125,8 +123,8 @@ gh repo create WPMT-brand-vault --public --source=. --remote=origin --push
 
 ## 트러블슈팅
 
-**서버 안 켜짐**: `pip install fastapi uvicorn python-multipart` 먼저 실행.
+**Drive 자동 연결 안 됨**: 상단 "Drive 미연결" 클릭 → Client ID 입력 → Google 팝업 허용. 이후 자동 연결됨.
 
-**파일 업로드 안 됨**: `uvicorn server:app --port 8080` 으로 서버가 떠 있는지 확인.
+**팝업 차단됨**: 주소창 우측 팝업 차단 해제 후 다시 클릭.
 
 **오디오 떼고 싶음**: 랜덤 뽑기 영상은 `muted` 자동 적용. 미리보기 모달은 사운드 ON.
