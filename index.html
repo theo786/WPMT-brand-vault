@@ -622,10 +622,19 @@
   .editor-toolbar button {
     padding: 4px 9px; border-radius: 6px; border: 1px solid transparent;
     background: none; color: var(--text); font-size: 13px; cursor: pointer;
-    transition: background 0.1s;
+    transition: background 0.1s; display: inline-flex; flex-direction: column;
+    align-items: center; gap: 1px;
   }
   .editor-toolbar button:hover { background: var(--panel-3); border-color: var(--border); }
   .editor-toolbar button.active { background: var(--accent); color: #181014; }
+  .editor-toolbar .kb {
+    font-size: 9px; color: var(--muted); font-weight: 400; line-height: 1;
+    letter-spacing: -0.3px;
+  }
+  .editor-toolbar button:hover .kb { color: var(--text); }
+  .rich-editor.drag-over {
+    border-color: var(--accent); background: rgba(245,166,35,0.05);
+  }
   .editor-toolbar .sep { width: 1px; background: var(--border); margin: 2px 4px; }
   .rich-editor {
     min-height: 280px; padding: 14px 16px;
@@ -867,19 +876,19 @@
           <div class="snote-editor-wrap" id="snoteEditorWrap" style="display:none">
             <input class="snote-title-input" id="snoteTitle" placeholder="제목 없음" />
             <div class="editor-toolbar" id="snoteToolbar">
-              <button data-scmd="h1" title="제목1">H1</button>
-              <button data-scmd="h2" title="제목2">H2</button>
-              <button data-scmd="h3" title="제목3">H3</button>
+              <button data-scmd="h1" title="제목1 (⌘⌥1)">H1<span class="kb">⌘⌥1</span></button>
+              <button data-scmd="h2" title="제목2 (⌘⌥2)">H2<span class="kb">⌘⌥2</span></button>
+              <button data-scmd="h3" title="제목3 (⌘⌥3)">H3<span class="kb">⌘⌥3</span></button>
               <div class="sep"></div>
-              <button data-scmd="bold" title="굵게"><b>B</b></button>
-              <button data-scmd="italic" title="기울임"><i>I</i></button>
+              <button data-scmd="bold" title="굵게 (⌘B)"><b>B</b><span class="kb">⌘B</span></button>
+              <button data-scmd="italic" title="기울임 (⌘I)"><i>I</i><span class="kb">⌘I</span></button>
               <div class="sep"></div>
-              <button data-scmd="ul" title="목록">• 목록</button>
-              <button data-scmd="ol" title="번호 목록">① 목록</button>
+              <button data-scmd="ul" title="점 목록 (⌘⇧8)">• 목록<span class="kb">⌘⇧8</span></button>
+              <button data-scmd="ol" title="번호 목록 (⌘⇧7)">① 목록<span class="kb">⌘⇧7</span></button>
               <div class="sep"></div>
-              <button data-scmd="img" title="이미지 삽입">🖼</button>
-              <button data-scmd="grid" title="이미지 그리드 (2열)">⊞</button>
-              <button data-scmd="toggle" title="접기/펼치기">▶ 접기</button>
+              <button data-scmd="img" title="이미지 삽입 (드래그도 가능)">🖼 이미지</button>
+              <button data-scmd="grid" title="이미지 2열 그리드">⊞ 그리드</button>
+              <button data-scmd="toggle" title="접기/펼치기 블록">▶ 접기</button>
             </div>
             <div class="rich-editor snote-rich" id="snoteContent" contenteditable="true"></div>
             <input type="file" id="snote-img-input" accept="image/*" multiple style="display:none" />

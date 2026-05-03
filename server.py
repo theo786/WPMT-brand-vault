@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -14,6 +15,13 @@ SAVE_DIR = Path.home() / "GoogleDrive" / "WPMT-Brand-Vault"
 META_FILE = SAVE_DIR / ".metadata.json"
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def load_meta() -> dict:
     if META_FILE.exists():
