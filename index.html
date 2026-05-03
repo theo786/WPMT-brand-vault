@@ -760,6 +760,16 @@
     .snote-layout { grid-template-columns: 1fr; }
     .snote-sidebar { display: none; }
   }
+  /* === 휴지통 === */
+  .trash-item {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+  }
+  .trash-type { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .trash-title { flex: 1; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trash-meta { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .trash-actions { display: flex; gap: 6px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -823,6 +833,7 @@
       <button data-tab="filevault">📂 파일보관함</button>
       <button data-tab="random">✨ 랜덤뽑기</button>
       <button data-tab="notion">📓 노션</button>
+      <button data-tab="trash">🗑 휴지통</button>
     </div>
 
     <!-- 콘텐츠 스케줄 뷰 -->
@@ -852,11 +863,51 @@
 
     <!-- 회의록 뷰 -->
     <section id="minutesView" style="display:none">
-      <div class="section-header">
-        <h2>📋 회의록</h2>
-        <button class="btn-primary" id="addMinuteBtn">+ 회의록 작성</button>
+      <div class="snote-layout" id="minuteLayout">
+        <div class="snote-sidebar">
+          <div class="snote-sidebar-top">
+            <button class="btn-primary" id="addMinuteBtn" style="width:100%;text-align:center;">+ 새 회의록</button>
+          </div>
+          <div id="minuteList"></div>
+        </div>
+        <div class="snote-editor-panel">
+          <div class="snote-empty" id="minuteEmpty">← 회의록을 선택하거나 새로 만드세요</div>
+          <div class="snote-editor-wrap" id="minuteEditorWrap" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <input type="date" id="mn-date" class="snote-title-input" style="font-size:14px;font-weight:400;" />
+              <input id="mn-title" class="snote-title-input" placeholder="회의록 제목" />
+            </div>
+            <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">참석자</div>
+              <div id="mn-attendees" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+            </div>
+            <div class="editor-toolbar" id="minuteToolbar">
+              <button data-mcmd="h1" title="제목1 (⌘⌥1)">H1<span class="kb">⌘⌥1</span></button>
+              <button data-mcmd="h2" title="제목2 (⌘⌥2)">H2<span class="kb">⌘⌥2</span></button>
+              <button data-mcmd="h3" title="제목3 (⌘⌥3)">H3<span class="kb">⌘⌥3</span></button>
+              <div class="sep"></div>
+              <button data-mcmd="bold" title="굵게 (⌘B)"><b>B</b><span class="kb">⌘B</span></button>
+              <button data-mcmd="italic" title="기울임 (⌘I)"><i>I</i><span class="kb">⌘I</span></button>
+              <div class="sep"></div>
+              <button data-mcmd="ul" title="점 목록 (⌘⇧8)">• 목록<span class="kb">⌘⇧8</span></button>
+              <button data-mcmd="ol" title="번호 목록 (⌘⇧7)">① 목록<span class="kb">⌘⇧7</span></button>
+              <div class="sep"></div>
+              <button data-mcmd="img" title="이미지 삽입">🖼 이미지</button>
+              <button data-mcmd="grid" title="이미지 2열 그리드">⊞ 그리드</button>
+              <button data-mcmd="toggle" title="접기/펼치기 블록">▶ 접기</button>
+              <div class="sep"></div>
+              <button id="minuteFullscreenBtn" title="풀스크린 (⌘⇧F)">⛶</button>
+            </div>
+            <div class="rich-editor snote-rich" id="mn-editor" contenteditable="true"></div>
+            <input type="file" id="mn-img-input" accept="image/*" multiple style="display:none" />
+            <div class="snote-actions">
+              <span id="minuteSaveStatus" style="font-size:12px;color:var(--muted);">저장됨</span>
+              <button class="btn ghost" id="minuteCloseBtn" style="font-size:12px;">✕ 닫기</button>
+              <button class="btn ghost" id="minuteDeleteBtn" style="color:var(--danger);font-size:12px;">🗑 삭제</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="minute-list" id="minuteList"></div>
     </section>
 
     <!-- 레퍼런스 뷰 — 북마크만 심플하게 -->
@@ -931,6 +982,7 @@
             <input type="file" id="snote-img-input" accept="image/*" multiple style="display:none" />
             <div class="snote-actions">
               <span id="snoteSaveStatus" style="font-size:12px;color:var(--muted);">저장됨</span>
+              <button class="btn ghost" id="snoteCloseBtn" style="font-size:12px;">✕ 닫기</button>
               <button class="btn ghost" id="snoteDeleteBtn" style="color:var(--danger);font-size:12px;">🗑 삭제</button>
             </div>
           </div>
@@ -957,6 +1009,16 @@
 
   </div>
 </div>
+
+    <!-- 휴지통 뷰 -->
+    <section id="trashView" style="display:none">
+      <div class="section-header" style="margin-bottom:10px;">
+        <h2>🗑 휴지통</h2>
+        <button class="btn ghost" id="emptyTrashBtn" style="color:var(--danger);font-size:12px;">전체 영구 삭제</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">삭제 후 7일이 지나면 자동으로 영구 삭제됩니다.</div>
+      <div id="trashList"></div>
+    </section>
 
     <!-- 노션 링크 뷰 -->
     <section id="notionView" style="display:none">
@@ -1267,6 +1329,7 @@ async function initApp(user) {
   $('#userEmail').textContent = user.email || '';
   showApp(true);
   await Promise.all([Storage.pull(), loadTeamBoard()]);
+  await purgeOldTrash();
   renderAll();
   renderMission();
   setTimeout(() => tryAutoConnectDrive(), 500);
@@ -1861,11 +1924,13 @@ function switchTab(tab) {
   $('#filevaultView').style.display     = tab === 'filevault'   ? 'block' : 'none';
   $('#randomView').style.display        = tab === 'random'      ? 'block' : 'none';
   $('#notionView').style.display        = tab === 'notion'      ? 'block' : 'none';
+  $('#trashView').style.display         = tab === 'trash'       ? 'block' : 'none';
   if (tab === 'schedule')   renderContentSchedule();
   if (tab === 'tasks')      renderTasks();
   if (tab === 'minutes')    renderMinutes();
   if (tab === 'seminotion') renderNoteList();
   if (tab === 'notion')     renderNotionList();
+  if (tab === 'trash')      renderTrash();
   if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
@@ -1928,7 +1993,6 @@ $$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.da
 $('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
 $('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
 $('#addContentBtn').addEventListener('click', () => openContentModal(null, fmtDate(new Date())));
-$('#addMinuteBtn').addEventListener('click', () => openMinuteModal(null));
 
 document.addEventListener('click', (e) => {
   const ftBtn = e.target.closest('[data-ft]');
@@ -2075,10 +2139,30 @@ async function updateTeamItem(id, itemData) {
 }
 
 async function deleteTeamItem(id) {
+  const item = teamItems.find(x => x.id === id);
+  if (!item) return false;
+  const deleted_at = new Date().toISOString();
+  const { error } = await supabase
+    .from('wpmt_team_board')
+    .update({ data: { ...item.data, deleted: true, deleted_at }, updated_at: deleted_at })
+    .eq('id', id);
+  if (error) { toast('오류: ' + error.message, 'error'); return false; }
+  const idx = teamItems.findIndex(x => x.id === id);
+  if (idx >= 0) teamItems[idx].data = { ...item.data, deleted: true, deleted_at };
+  return true;
+}
+
+async function hardDeleteTeamItem(id) {
   const { error } = await supabase.from('wpmt_team_board').delete().eq('id', id);
   if (error) { toast('오류: ' + error.message, 'error'); return false; }
   teamItems = teamItems.filter(x => x.id !== id);
   return true;
+}
+
+async function purgeOldTrash() {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const stale = teamItems.filter(x => x.data?.deleted && x.data.deleted_at < cutoff);
+  for (const item of stale) await hardDeleteTeamItem(item.id);
 }
 
 /* ============================================================
@@ -2087,7 +2171,7 @@ async function deleteTeamItem(id) {
 function renderTasks() {
   const board = $('#taskBoard');
   if (!board) return;
-  const tasks = teamItems.filter(x => x.type === 'task');
+  const tasks = teamItems.filter(x => x.type === 'task' && !x.data?.deleted);
   board.innerHTML = MEMBERS.map((m, mi) => {
     const myTasks = tasks.filter(t => t.data.assignee === m.name);
     const cardsHtml = myTasks.map(t => {
@@ -2296,7 +2380,7 @@ function renderContentSchedule() {
   const todayStr = fmtDate(new Date());
   const first = dates[0], last = dates[13];
   weekLabel.textContent = `${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일`;
-  const contents = teamItems.filter(x => x.type === 'content');
+  const contents = teamItems.filter(x => x.type === 'content' && !x.data?.deleted);
   const tasks = teamItems.filter(x => x.type === 'task' && x.data.due);
   grid.innerHTML = dates.map((d, di) => {
     const dateStr = fmtDate(d);
@@ -2432,180 +2516,213 @@ function openContentModal(item, defaultDate) {
 }
 
 /* ============================================================
- * 회의록
+ * 회의록 (패널 레이아웃)
  * ============================================================ */
+let activeMinuteId = null;
+let minuteAutoSaveTimer = null;
+
+function getMinutes() {
+  return teamItems
+    .filter(x => x.type === 'minute' && !x.data?.deleted)
+    .sort((a, b) => (b.data.date || '').localeCompare(a.data.date || ''));
+}
+
 function renderMinutes() {
   const list = $('#minuteList');
   if (!list) return;
-  const minutes = teamItems.filter(x => x.type === 'minute')
-    .sort((a, b) => b.data.date.localeCompare(a.data.date));
+  const minutes = getMinutes();
   if (minutes.length === 0) {
-    list.innerHTML = `<div class="empty">📋 아직 회의록이 없어요.<br>첫 회의록을 작성해보세요!</div>`;
+    list.innerHTML = `<div style="padding:16px;text-align:center;font-size:12px;color:var(--muted);">회의록이 없어요<br>위 버튼으로 만들어보세요!</div>`;
     return;
   }
   list.innerHTML = minutes.map(m => {
     const d = m.data;
-    const attendeeHtml = (d.attendees || []).map((a, i) => {
-      const mi = MEMBERS.findIndex(mb => mb.name === a);
-      const label = mi >= 0 ? MEMBERS[mi].nick : a;
-      return `<span class="minute-attendee" style="${mi>=0?`color:${['#f5a623','#ff6b6b','#b07cff'][mi]}`:''}"> ${escapeHtml(label)}</span>`;
-    }).join('');
-    const tmp = document.createElement('div'); tmp.innerHTML = d.content || '';
-    const preview = (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+    const isActive = m.id === activeMinuteId;
     return `
-      <div class="minute-card" data-id="${m.id}">
-        <div class="minute-top">
-          <span class="minute-date">${d.date}</span>
-          <span class="minute-title">${escapeHtml(d.title)}</span>
-        </div>
-        ${attendeeHtml ? `<div class="minute-attendees">${attendeeHtml}</div>` : ''}
-        ${preview ? `<div class="minute-preview">${escapeHtml(preview.slice(0, 120))}</div>` : ''}
+      <div class="note-list-item ${isActive ? 'active' : ''}" data-minuteid="${m.id}">
+        <div class="nli-title">${escapeHtml(d.title || '제목 없음')}</div>
+        <div class="nli-date">${d.date || ''}</div>
       </div>`;
   }).join('');
-  list.querySelectorAll('.minute-card').forEach(card =>
-    card.addEventListener('click', () => {
-      const item = teamItems.find(x => x.id === card.dataset.id);
-      if (item) openMinuteModal(item);
-    })
-  );
+  list.querySelectorAll('.note-list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const minute = teamItems.find(x => x.id === item.dataset.minuteid);
+      if (minute) openMinute(minute);
+    });
+  });
 }
 
-function openMinuteModal(item) {
-  const d = item ? item.data : {};
-  const isEdit = !!item;
-  const today = fmtDate(new Date());
-  openWideModal(`
-    <h3>${isEdit ? '📋 회의록 수정' : '📋 회의록 작성'}</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-      <div class="input-row" style="margin:0">
-        <label>날짜</label>
-        <input type="date" id="mn-date" value="${d.date || today}" />
-      </div>
-      <div class="input-row" style="margin:0">
-        <label>제목</label>
-        <input id="mn-title" placeholder="예: 5월 2주차 주간회의" value="${escapeHtml(d.title || '')}" />
-      </div>
-    </div>
-    <div class="input-row">
-      <label>참석자</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 0;">
-        ${MEMBERS.map((m, mi) => `
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="checkbox" value="${m.name}" ${(d.attendees||[]).includes(m.name)?'checked':''} />
-            <span style="color:${['#f5a623','#ff6b6b','#b07cff'][mi]}">${m.nick}</span>
-          </label>`).join('')}
-      </div>
-    </div>
-    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">내용</label>
-    <div class="editor-toolbar" id="editorToolbar">
-      <button data-cmd="h1" title="제목1">H1</button>
-      <button data-cmd="h2" title="제목2">H2</button>
-      <button data-cmd="h3" title="제목3">H3</button>
-      <div class="sep"></div>
-      <button data-cmd="bold" title="굵게"><b>B</b></button>
-      <button data-cmd="italic" title="기울임"><i>I</i></button>
-      <div class="sep"></div>
-      <button data-cmd="ul" title="점 목록">• 목록</button>
-      <button data-cmd="ol" title="번호 목록">① 목록</button>
-      <div class="sep"></div>
-      <button data-cmd="img" title="이미지 삽입">🖼</button>
-      <button data-cmd="grid" title="이미지 그리드 (2열)">⊞</button>
-      <button data-cmd="toggle" title="접기/펼치기">▶ 접기</button>
-      <div class="sep"></div>
-      <button id="mnFullscreenBtn" title="풀스크린">⛶</button>
-    </div>
-    <div class="rich-editor" id="mn-editor" contenteditable="true">${d.content || '<p>내용을 입력하세요...</p>'}</div>
-    <input type="file" id="mn-img-input" accept="image/*" multiple style="display:none" />
-    <div class="modal-actions">
-      <button class="btn ghost" data-close>취소</button>
-      ${isEdit ? `<button class="btn" id="mn-del" style="background:var(--danger);color:#fff;margin-right:auto;">삭제</button>` : ''}
-      <button class="btn" id="mn-save">${isEdit ? '저장' : '작성'}</button>
-    </div>
-  `);
+function openMinute(item) {
+  if (activeMinuteId && activeMinuteId !== item.id) flushMinuteAutoSave();
+  activeMinuteId = item.id;
+  const d = item.data;
+  const empty = $('#minuteEmpty');
+  const wrap = $('#minuteEditorWrap');
+  if (empty) empty.style.display = 'none';
+  if (wrap) wrap.style.display = 'flex';
 
-  const editor = $('#mn-editor');
-  const imgInput = $('#mn-img-input');
-  let pendingGrid = false;
+  const dateEl = $('#mn-date');
+  const titleEl = $('#mn-title');
+  const editorEl = $('#mn-editor');
+  if (dateEl) dateEl.value = d.date || fmtDate(new Date());
+  if (titleEl) titleEl.value = d.title || '';
+  if (editorEl) editorEl.innerHTML = d.content || '<p></p>';
 
-  // 초기 placeholder 클리어
-  editor.addEventListener('focus', () => {
-    if (editor.innerHTML === '<p>내용을 입력하세요...</p>') {
-      editor.innerHTML = '';
-    }
-  });
-
-  // 툴바 커맨드
-  $('#editorToolbar').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-cmd]');
-    if (!btn) return;
-    const cmd = btn.dataset.cmd;
-    editor.focus();
-    if (cmd === 'bold') { document.execCommand('bold'); }
-    else if (cmd === 'italic') { document.execCommand('italic'); }
-    else if (cmd === 'h1') { document.execCommand('formatBlock', false, 'h1'); }
-    else if (cmd === 'h2') { document.execCommand('formatBlock', false, 'h2'); }
-    else if (cmd === 'h3') { document.execCommand('formatBlock', false, 'h3'); }
-    else if (cmd === 'ul') document.execCommand('insertUnorderedList');
-    else if (cmd === 'ol') document.execCommand('insertOrderedList');
-    else if (cmd === 'img') { pendingGrid = false; imgInput.click(); }
-    else if (cmd === 'grid') { pendingGrid = true; imgInput.multiple = true; imgInput.click(); }
-    else if (cmd === 'toggle') {
-      const sel = window.getSelection();
-      const text = sel && sel.toString().trim() ? sel.toString() : '접기/펼치기 제목';
-      document.execCommand('insertHTML', false, `<details><summary>${text}</summary><p>내용을 입력하세요</p></details><p></p>`);
-    }
-  });
-
-  // 풀스크린
-  const mnModal = $('#modal');
-  const mnFsBtn = $('#mnFullscreenBtn');
-  if (mnFsBtn && mnModal) {
-    mnFsBtn.addEventListener('click', () => {
-      const on = mnModal.classList.toggle('modal-fullscreen');
-      mnFsBtn.textContent = on ? '✕' : '⛶';
-    });
+  const attendeesEl = $('#mn-attendees');
+  if (attendeesEl) {
+    attendeesEl.innerHTML = MEMBERS.map((m, mi) => `
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" class="mn-attendee-cb" value="${m.name}" ${(d.attendees||[]).includes(m.name)?'checked':''} />
+        <span style="color:${['#f5a623','#ff6b6b','#b07cff'][mi]}">${m.nick}</span>
+      </label>`).join('');
+    attendeesEl.querySelectorAll('.mn-attendee-cb').forEach(cb =>
+      cb.addEventListener('change', () => scheduleMinuteAutoSave())
+    );
   }
+
+  renderMinutes();
+  if (titleEl) titleEl.oninput = () => scheduleMinuteAutoSave();
+  if (dateEl) dateEl.onchange = () => scheduleMinuteAutoSave();
+  if (editorEl) editorEl.oninput = () => scheduleMinuteAutoSave();
+}
+
+function scheduleMinuteAutoSave() {
+  clearTimeout(minuteAutoSaveTimer);
+  const status = $('#minuteSaveStatus');
+  if (status) status.textContent = '저장 중…';
+  minuteAutoSaveTimer = setTimeout(() => flushMinuteAutoSave(), 800);
+}
+
+async function flushMinuteAutoSave() {
+  clearTimeout(minuteAutoSaveTimer);
+  if (!activeMinuteId) return;
+  const dateEl = $('#mn-date');
+  const titleEl = $('#mn-title');
+  const editorEl = $('#mn-editor');
+  if (!titleEl || !editorEl) return;
+  const attendees = [...document.querySelectorAll('.mn-attendee-cb:checked')].map(c => c.value);
+  const itemData = {
+    date: dateEl?.value || fmtDate(new Date()),
+    title: titleEl.value.trim() || '제목 없음',
+    attendees, content: editorEl.innerHTML,
+    updated_at: new Date().toISOString(),
+  };
+  const ok = await updateTeamItem(activeMinuteId, itemData);
+  const status = $('#minuteSaveStatus');
+  if (status) status.textContent = ok ? '저장됨 ✓' : '저장 실패';
+  renderMinutes();
+}
+
+// 새 회의록 버튼
+$('#addMinuteBtn')?.addEventListener('click', async () => {
+  await flushMinuteAutoSave();
+  const today = fmtDate(new Date());
+  const newMinute = await addTeamItem('minute', {
+    date: today, title: '새 회의록', attendees: [],
+    content: '<p></p>', updated_at: new Date().toISOString(),
+  });
+  if (!newMinute) return;
+  openMinute(newMinute);
+  const titleEl = $('#mn-title');
+  if (titleEl) { titleEl.focus(); titleEl.select(); }
+  const layout = $('#minuteLayout');
+  const fsBtn = $('#minuteFullscreenBtn');
+  if (layout && !layout.classList.contains('fullscreen')) {
+    layout.classList.add('fullscreen');
+    if (fsBtn) { fsBtn.textContent = '✕'; fsBtn.title = '풀스크린 종료 (ESC)'; }
+  }
+});
+
+// 닫기
+$('#minuteCloseBtn')?.addEventListener('click', async () => {
+  await flushMinuteAutoSave();
+  activeMinuteId = null;
+  const empty = $('#minuteEmpty');
+  const wrap = $('#minuteEditorWrap');
+  if (empty) empty.style.display = 'flex';
+  if (wrap) wrap.style.display = 'none';
+  renderMinutes();
+});
+
+// 삭제
+$('#minuteDeleteBtn')?.addEventListener('click', async () => {
+  if (!activeMinuteId) return;
+  if (!confirm('이 회의록을 삭제할까요?')) return;
+  await deleteTeamItem(activeMinuteId);
+  activeMinuteId = null;
+  const empty = $('#minuteEmpty');
+  const wrap = $('#minuteEditorWrap');
+  if (empty) empty.style.display = 'flex';
+  if (wrap) wrap.style.display = 'none';
+  renderMinutes();
+  toast('삭제됨 (휴지통에서 복원 가능)');
+});
+
+// 툴바
+$('#minuteToolbar')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-mcmd]');
+  if (!btn) return;
+  const cmd = btn.dataset.mcmd;
+  const editorEl = $('#mn-editor');
+  if (!editorEl) return;
+  editorEl.focus();
+  if (cmd === 'bold') document.execCommand('bold');
+  else if (cmd === 'italic') document.execCommand('italic');
+  else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
+  else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
+  else if (cmd === 'h3') document.execCommand('formatBlock', false, 'h3');
+  else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+  else if (cmd === 'ol') document.execCommand('insertOrderedList');
+  else if (cmd === 'img') { mnImgPendingGrid = false; $('#mn-img-input')?.click(); }
+  else if (cmd === 'grid') { mnImgPendingGrid = true; if ($('#mn-img-input')) { $('#mn-img-input').multiple = true; $('#mn-img-input').click(); } }
+  else if (cmd === 'toggle') {
+    const sel = window.getSelection();
+    const text = sel && sel.toString().trim() ? sel.toString() : '접기/펼치기 제목';
+    document.execCommand('insertHTML', false, `<details><summary>${text}</summary><p>내용을 입력하세요</p></details><p></p>`);
+  }
+});
+
+// 이미지 + 드래그앤드랍 + 리사이즈
+let mnImgPendingGrid = false;
+(function() {
+  const imgInput = $('#mn-img-input');
+  const editorEl = $('#mn-editor');
+  if (!imgInput || !editorEl) return;
 
   function toDataURL(file) {
-    return new Promise(resolve => {
-      const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file);
-    });
+    return new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file); });
   }
-
   function insertMnImg(url) {
     document.execCommand('insertHTML', false, `<span class="img-wrap" contenteditable="false"><img src="${url}" style="width:280px;height:auto;" /></span><p></p>`);
   }
 
-  // 이미지 삽입
   imgInput.addEventListener('change', async () => {
     const files = Array.from(imgInput.files);
     if (!files.length) return;
-    editor.focus();
-    if (pendingGrid && files.length >= 2) {
+    editorEl.focus();
+    if (mnImgPendingGrid && files.length >= 2) {
       let imgs = '';
-      for (const f of files) { const url = await toDataURL(f); imgs += `<img src="${url}" style="width:100%;height:auto;" />`; }
+      for (const f of files) { imgs += `<img src="${await toDataURL(f)}" style="width:100%;height:auto;" />`; }
       document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
     } else {
-      for (const f of files) { insertMnImg(await toDataURL(f)); }
+      for (const f of files) insertMnImg(await toDataURL(f));
     }
     imgInput.value = '';
+    scheduleMinuteAutoSave();
   });
 
-  // 드래그앤드랍
-  editor.addEventListener('dragover', (e) => {
-    if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); editor.classList.add('drag-over'); }
-  });
-  editor.addEventListener('dragleave', () => editor.classList.remove('drag-over'));
-  editor.addEventListener('drop', async (e) => {
+  editorEl.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); editorEl.classList.add('drag-over'); } });
+  editorEl.addEventListener('dragleave', () => editorEl.classList.remove('drag-over'));
+  editorEl.addEventListener('drop', async (e) => {
     const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
-    e.preventDefault(); editor.classList.remove('drag-over'); editor.focus();
-    for (const f of files) { insertMnImg(await toDataURL(f)); }
+    e.preventDefault(); editorEl.classList.remove('drag-over'); editorEl.focus();
+    for (const f of files) insertMnImg(await toDataURL(f));
+    scheduleMinuteAutoSave();
   });
 
-  // 이미지 클릭 리사이즈
   let mnPopup = null;
-  editor.addEventListener('click', (e) => {
+  editorEl.addEventListener('click', (e) => {
     const img = e.target.closest('.img-wrap img') || (e.target.tagName === 'IMG' ? e.target : null);
     if (!img) { if (mnPopup) { mnPopup.remove(); mnPopup = null; } return; }
     e.preventDefault();
@@ -2619,45 +2736,40 @@ function openMinuteModal(item) {
     wrap.appendChild(p); mnPopup = p;
     const input = p.querySelector('input'); const btn = p.querySelector('button');
     input.focus(); input.select();
-    const apply = () => { const v = parseInt(input.value); if (v >= 50 && v <= 1200) { img.style.width = v + 'px'; img.style.height = 'auto'; } p.remove(); mnPopup = null; };
+    const apply = () => { const v = parseInt(input.value); if (v >= 50 && v <= 1200) { img.style.width = v + 'px'; img.style.height = 'auto'; } p.remove(); mnPopup = null; scheduleMinuteAutoSave(); };
     btn.addEventListener('click', apply);
     input.addEventListener('keydown', e2 => { if (e2.key === 'Enter') apply(); if (e2.key === 'Escape') { p.remove(); mnPopup = null; } });
   });
 
   // 키보드 단축키
-  editor.addEventListener('keydown', (e) => {
+  editorEl.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
     if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); flushMinuteAutoSave(); }
     if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '1') { e.preventDefault(); document.execCommand('formatBlock', false, 'h1'); }
     if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '2') { e.preventDefault(); document.execCommand('formatBlock', false, 'h2'); }
     if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '3') { e.preventDefault(); document.execCommand('formatBlock', false, 'h3'); }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '8') { e.preventDefault(); document.execCommand('insertUnorderedList'); }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '7') { e.preventDefault(); document.execCommand('insertOrderedList'); }
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') { e.preventDefault(); mnFsBtn?.click(); }
-    if (e.key === 'Escape' && mnModal?.classList.contains('modal-fullscreen')) { mnModal.classList.remove('modal-fullscreen'); if (mnFsBtn) mnFsBtn.textContent = '⛶'; }
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); $('#minuteFullscreenBtn')?.click(); }
   });
+})();
 
-  $('[data-close]').addEventListener('click', closeModal);
-  if (isEdit) {
-    $('#mn-del').addEventListener('click', async () => {
-      if (!confirm('삭제할까요?')) return;
-      await deleteTeamItem(item.id);
-      closeModal(); renderMinutes(); toast('삭제됨');
-    });
+// 풀스크린
+(function() {
+  const layout = $('#minuteLayout');
+  const btn = $('#minuteFullscreenBtn');
+  if (!btn || !layout) return;
+  function toggle() {
+    const on = layout.classList.toggle('fullscreen');
+    btn.textContent = on ? '✕' : '⛶';
+    btn.title = on ? '풀스크린 종료 (ESC)' : '풀스크린 (⌘⇧F)';
   }
-  $('#mn-save').addEventListener('click', async () => {
-    const title = $('#mn-title').value.trim();
-    if (!title) { toast('제목을 입력하세요', 'error'); return; }
-    const attendees = [...document.querySelectorAll('#modal input[type=checkbox]:checked')].map(c => c.value);
-    const content = editor.innerHTML;
-    const itemData = { date: $('#mn-date').value, title, attendees, content };
-    $('#mn-save').disabled = true;
-    if (isEdit) await updateTeamItem(item.id, itemData);
-    else await addTeamItem('minute', itemData);
-    closeModal(); renderMinutes();
-    toast(isEdit ? '수정됨!' : '회의록 저장됨!', 'success');
+  btn.addEventListener('click', toggle);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && layout.classList.contains('fullscreen')) toggle();
   });
-}
+})();
 
 /* ============================================================
  * 세미 노션
@@ -2667,7 +2779,7 @@ let noteAutoSaveTimer = null;
 
 function getNotes() {
   return teamItems
-    .filter(x => x.type === 'note')
+    .filter(x => x.type === 'note' && !x.data?.deleted)
     .sort((a, b) => (b.data.updated_at || b.created_at || '').localeCompare(a.data.updated_at || a.created_at || ''));
 }
 
@@ -2767,6 +2879,16 @@ $('#addNoteBtn')?.addEventListener('click', async () => {
   }
 });
 
+$('#snoteCloseBtn')?.addEventListener('click', async () => {
+  await flushNoteAutoSave();
+  activeNoteId = null;
+  const empty = $('#snoteEmpty');
+  const wrap = $('#snoteEditorWrap');
+  if (empty) empty.style.display = 'flex';
+  if (wrap) wrap.style.display = 'none';
+  renderNoteList();
+});
+
 $('#snoteDeleteBtn')?.addEventListener('click', async () => {
   if (!activeNoteId) return;
   if (!confirm('이 노트를 삭제할까요?')) return;
@@ -2777,7 +2899,7 @@ $('#snoteDeleteBtn')?.addEventListener('click', async () => {
   if (empty) empty.style.display = 'flex';
   if (wrap) wrap.style.display = 'none';
   renderNoteList();
-  toast('삭제됨');
+  toast('삭제됨 (휴지통에서 복원 가능)');
 });
 
 // 세미 노션 툴바
@@ -2931,6 +3053,61 @@ $('#snoteContent')?.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') { e.preventDefault(); toggle(); }
   });
 })();
+
+/* ============================================================
+ * 휴지통
+ * ============================================================ */
+function renderTrash() {
+  const el = $('#trashList');
+  if (!el) return;
+  const trashed = teamItems.filter(x => x.data?.deleted)
+    .sort((a, b) => (b.data.deleted_at || '').localeCompare(a.data.deleted_at || ''));
+  if (trashed.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:14px;">🗑 휴지통이 비어있어요</div>`;
+    return;
+  }
+  const typeLabel = { note: '📝 노트', minute: '📋 회의록', task: '✅ 업무', content: '📅 스케줄' };
+  el.innerHTML = trashed.map(item => {
+    const d = item.data;
+    const daysLeft = Math.max(0, Math.ceil((new Date(d.deleted_at).getTime() + 7*24*60*60*1000 - Date.now()) / (24*60*60*1000)));
+    const title = d.title || d.topic || '제목 없음';
+    return `
+      <div class="trash-item">
+        <span class="trash-type">${typeLabel[item.type] || item.type}</span>
+        <div class="trash-title">${escapeHtml(title)}</div>
+        <div class="trash-meta">${daysLeft}일 후 영구 삭제</div>
+        <div class="trash-actions">
+          <button class="btn ghost" style="font-size:12px;" data-act="restore" data-id="${item.id}">↩ 복원</button>
+          <button class="btn ghost" style="font-size:12px;color:var(--danger);" data-act="perm-del" data-id="${item.id}">영구 삭제</button>
+        </div>
+      </div>`;
+  }).join('');
+  el.querySelectorAll('[data-act="restore"]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (!item) return;
+      const d = { ...item.data };
+      delete d.deleted; delete d.deleted_at;
+      await updateTeamItem(item.id, d);
+      renderTrash(); toast('복원됨 ↩', 'success');
+    })
+  );
+  el.querySelectorAll('[data-act="perm-del"]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      if (!confirm('영구 삭제할까요? 복원 불가능합니다.')) return;
+      await hardDeleteTeamItem(btn.dataset.id);
+      renderTrash(); toast('영구 삭제됨');
+    })
+  );
+}
+
+$('#emptyTrashBtn')?.addEventListener('click', async () => {
+  const trashed = teamItems.filter(x => x.data?.deleted);
+  if (trashed.length === 0) { toast('휴지통이 이미 비어있어요'); return; }
+  if (!confirm(`휴지통의 항목 ${trashed.length}개를 모두 영구 삭제할까요?`)) return;
+  for (const item of trashed) await hardDeleteTeamItem(item.id);
+  renderTrash(); toast('전체 영구 삭제됨');
+});
 
 /* ============================================================
  * 전체 렌더
