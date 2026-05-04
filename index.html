@@ -754,6 +754,17 @@
   .note-list-item .nli-date {
     font-size: 11px; color: var(--muted); margin-top: 2px;
   }
+  .note-list-item .nli-actions {
+    display: none; gap: 4px; margin-top: 6px;
+  }
+  .note-list-item:hover .nli-actions { display: flex; }
+  .nli-btn {
+    font-size: 10px; padding: 2px 7px; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--panel-3); color: var(--muted);
+    line-height: 1.4;
+  }
+  .nli-btn:hover { color: var(--text); border-color: var(--accent); }
+  .nli-btn.del:hover { color: var(--danger); border-color: var(--danger); }
   .snote-editor-panel {
     display: flex; flex-direction: column; overflow: hidden; background: var(--panel);
   }
@@ -2667,9 +2678,33 @@ function renderMinutes() {
       <div class="note-list-item ${isActive ? 'active' : ''}" data-minuteid="${m.id}">
         <div class="nli-title">${escapeHtml(d.title || '제목 없음')}</div>
         <div class="nli-date">${d.date || ''}</div>
+        <div class="nli-actions">
+          <button class="nli-btn edit-btn">✏️ 수정</button>
+          <button class="nli-btn del del-btn">🗑 삭제</button>
+        </div>
       </div>`;
   }).join('');
   list.querySelectorAll('.note-list-item').forEach(item => {
+    item.querySelector('.edit-btn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const minute = teamItems.find(x => x.id === item.dataset.minuteid);
+      if (minute) openMinute(minute);
+    });
+    item.querySelector('.del-btn')?.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm('이 회의록을 삭제할까요?')) return;
+      await deleteTeamItem(item.dataset.minuteid);
+      if (activeMinuteId === item.dataset.minuteid) {
+        activeMinuteId = null;
+        const layout = $('#minuteLayout');
+        const fsBtn = $('#minuteFullscreenBtn');
+        if (layout?.classList.contains('fullscreen')) { layout.classList.remove('fullscreen'); if (fsBtn) { fsBtn.textContent = '⛶'; fsBtn.title = '풀스크린 (⌘⇧F)'; } }
+        $('#minuteEmpty').style.display = 'flex';
+        $('#minuteEditorWrap').style.display = 'none';
+      }
+      renderMinutes();
+      toast('삭제됨 (휴지통에서 복원 가능)');
+    });
     item.addEventListener('click', () => {
       const minute = teamItems.find(x => x.id === item.dataset.minuteid);
       if (minute) openMinute(minute);
@@ -2931,9 +2966,33 @@ function renderNoteList() {
       <div class="note-list-item ${isActive ? 'active' : ''}" data-noteid="${n.id}">
         <div class="nli-title">${escapeHtml(d.title || '제목 없음')}</div>
         <div class="nli-date">${dateStr}</div>
+        <div class="nli-actions">
+          <button class="nli-btn edit-btn">✏️ 수정</button>
+          <button class="nli-btn del del-btn">🗑 삭제</button>
+        </div>
       </div>`;
   }).join('');
   list.querySelectorAll('.note-list-item').forEach(item => {
+    item.querySelector('.edit-btn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const note = teamItems.find(x => x.id === item.dataset.noteid);
+      if (note) openNote(note);
+    });
+    item.querySelector('.del-btn')?.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm('이 노트를 삭제할까요?')) return;
+      await deleteTeamItem(item.dataset.noteid);
+      if (activeNoteId === item.dataset.noteid) {
+        activeNoteId = null;
+        const layout = document.querySelector('#seminotionView .snote-layout') || document.querySelector('.snote-layout');
+        const fsBtn = $('#snoteFullscreenBtn');
+        if (layout?.classList.contains('fullscreen')) { layout.classList.remove('fullscreen'); if (fsBtn) { fsBtn.textContent = '⛶'; fsBtn.title = '풀스크린 (⌘⇧F)'; } }
+        $('#snoteEmpty').style.display = 'flex';
+        $('#snoteEditorWrap').style.display = 'none';
+      }
+      renderNoteList();
+      toast('삭제됨 (휴지통에서 복원 가능)');
+    });
     item.addEventListener('click', () => {
       const note = teamItems.find(x => x.id === item.dataset.noteid);
       if (note) openNote(note);
