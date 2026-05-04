@@ -1444,10 +1444,19 @@ function isDriveConnected() { return driveConnected; }
 
 function getDriveLoginHint() { return localStorage.getItem('wpmt_drive_login_hint') || ''; }
 function setDriveLoginHint(email) { if (email) localStorage.setItem('wpmt_drive_login_hint', email); }
+function saveDriveToken(t) { localStorage.setItem('wpmt_drive_token', JSON.stringify(t)); }
+function loadDriveToken() {
+  try {
+    const t = JSON.parse(localStorage.getItem('wpmt_drive_token') || 'null');
+    return (t && Date.now() < t.expires_at) ? t : null;
+  } catch { return null; }
+}
 
 function ensureDriveToken(forcePopup = false) {
-  if (!forcePopup && driveToken && Date.now() < driveToken.expires_at) {
-    return Promise.resolve(driveToken.access_token);
+  if (!forcePopup) {
+    if (driveToken && Date.now() < driveToken.expires_at) return Promise.resolve(driveToken.access_token);
+    const saved = loadDriveToken();
+    if (saved) { driveToken = saved; return Promise.resolve(saved.access_token); }
   }
   const clientId = getDriveClientId();
   if (!clientId) return Promise.reject(new Error('no_client_id'));
@@ -1464,6 +1473,7 @@ function ensureDriveToken(forcePopup = false) {
           access_token: resp.access_token,
           expires_at: Date.now() + (parseInt(resp.expires_in) - 60) * 1000,
         };
+        saveDriveToken(driveToken);
         // 계정 이메일 저장 (다음 자동연결용)
         if (!loginHint) {
           try {
@@ -2752,6 +2762,13 @@ $('#addMinuteBtn')?.addEventListener('click', async () => {
 $('#minuteCloseBtn')?.addEventListener('click', async () => {
   await flushMinuteAutoSave();
   activeMinuteId = null;
+  // 풀스크린 종료
+  const layout = $('#minuteLayout');
+  const fsBtn = $('#minuteFullscreenBtn');
+  if (layout?.classList.contains('fullscreen')) {
+    layout.classList.remove('fullscreen');
+    if (fsBtn) { fsBtn.textContent = '⛶'; fsBtn.title = '풀스크린 (⌘⇧F)'; }
+  }
   const empty = $('#minuteEmpty');
   const wrap = $('#minuteEditorWrap');
   if (empty) empty.style.display = 'flex';
@@ -2997,6 +3014,13 @@ $('#addNoteBtn')?.addEventListener('click', async () => {
 $('#snoteCloseBtn')?.addEventListener('click', async () => {
   await flushNoteAutoSave();
   activeNoteId = null;
+  // 풀스크린 종료
+  const layout = document.querySelector('#seminotionView .snote-layout') || document.querySelector('.snote-layout');
+  const fsBtn = $('#snoteFullscreenBtn');
+  if (layout?.classList.contains('fullscreen')) {
+    layout.classList.remove('fullscreen');
+    if (fsBtn) { fsBtn.textContent = '⛶'; fsBtn.title = '풀스크린 (⌘⇧F)'; }
+  }
   const empty = $('#snoteEmpty');
   const wrap = $('#snoteEditorWrap');
   if (empty) empty.style.display = 'flex';
