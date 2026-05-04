@@ -3062,7 +3062,7 @@ $('#addNoteBtn')?.addEventListener('click', async () => {
   const titleEl = $('#snoteTitle');
   if (titleEl) { titleEl.focus(); titleEl.select(); }
   // 새 노트 → 자동 풀스크린
-  const layout = document.querySelector('.snote-layout');
+  const layout = document.querySelector('#seminotionView .snote-layout');
   const fsBtn = $('#snoteFullscreenBtn');
   if (layout && !layout.classList.contains('fullscreen')) {
     layout.classList.add('fullscreen');
@@ -3240,7 +3240,7 @@ $('#snoteContent')?.addEventListener('keydown', (e) => {
 
 // 풀스크린 토글
 (function() {
-  const layout = document.querySelector('.snote-layout');
+  const layout = document.querySelector('#seminotionView .snote-layout');
   const btn = $('#snoteFullscreenBtn');
   if (!btn || !layout) return;
   function toggle() {
