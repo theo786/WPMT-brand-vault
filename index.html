@@ -76,31 +76,77 @@
   /* === 미션 배너 === */
   .mission-banner {
     position: relative; overflow: hidden;
-    background: linear-gradient(135deg, rgba(245,166,35,0.07), rgba(255,107,107,0.07), rgba(176,124,255,0.07));
-    border-bottom: 1px solid rgba(245,166,35,0.25);
+    background: linear-gradient(135deg, rgba(245,166,35,0.09), rgba(255,107,107,0.06), rgba(176,124,255,0.09));
+    border-bottom: 1px solid rgba(245,166,35,0.4);
     padding: 13px 60px 13px 24px;
     text-align: center; cursor: pointer; user-select: none;
+    box-shadow: 0 2px 24px rgba(245,166,35,0.1), inset 0 1px 0 rgba(245,166,35,0.15);
+  }
+  .mission-banner::before {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(245,166,35,0.1), transparent);
+    animation: missionSweep 4s ease-in-out infinite; pointer-events: none;
   }
   .mission-banner::after {
     content: '';
     position: absolute; inset: 0;
-    background: radial-gradient(ellipse 60% 100% at 50% 50%, rgba(245,166,35,0.1) 0%, transparent 70%);
-    animation: missionPulse 5s ease-in-out infinite; pointer-events: none;
+    background: radial-gradient(ellipse 70% 200% at 50% 50%, rgba(245,166,35,0.12) 0%, transparent 65%);
+    animation: missionPulse 3s ease-in-out infinite; pointer-events: none;
   }
   @keyframes missionPulse { 0%,100% { opacity: 0.4 } 50% { opacity: 1 } }
+  @keyframes missionSweep { 0% { left: -60% } 100% { left: 160% } }
   .mission-text {
-    font-size: 15px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.45;
-    background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+    font-size: 15px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.45;
+    background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 45%, var(--accent-3) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    background-size: 200% auto; animation: missionShine 4s linear infinite;
+    background-size: 200% auto; animation: missionShine 3s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(245,166,35,0.7)) drop-shadow(0 0 20px rgba(255,107,107,0.35));
+    position: relative; z-index: 1;
   }
   @keyframes missionShine { 0% { background-position: 0% } 100% { background-position: 200% } }
   .mission-edit-btn {
     position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
     background: none; border: none; color: var(--muted); font-size: 14px;
     cursor: pointer; opacity: 0; transition: opacity 0.2s; padding: 4px 6px;
+    z-index: 2;
   }
   .mission-banner:hover .mission-edit-btn { opacity: 0.7; }
+  /* === 노션/피그마 링크 === */
+  .notion-split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .notion-col-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .notion-col-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .notion-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin-bottom: 10px; cursor: pointer; position: relative;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .notion-card:hover { border-color: rgba(245,166,35,0.5); box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+  .notion-card-thumb { width: 100%; height: 90px; object-fit: cover; display: block; background: var(--panel-2); }
+  .notion-card-thumb-placeholder {
+    width: 100%; height: 90px; display: flex; align-items: center; justify-content: center;
+    background: var(--panel-2); font-size: 28px;
+  }
+  .notion-card-body { padding: 10px 12px 12px; }
+  .notion-card-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notion-card-url { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notion-card-desc { font-size: 11px; color: var(--muted); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .notion-card-actions {
+    position: absolute; top: 6px; right: 6px; display: flex; gap: 4px;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .notion-card:hover .notion-card-actions { opacity: 1; }
+  .notion-card-act {
+    background: rgba(13,15,20,0.88); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 11px;
+    padding: 3px 8px; cursor: pointer; backdrop-filter: blur(4px);
+  }
+  .notion-card-act:hover { background: var(--panel-3); }
+  .notion-empty { padding: 32px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  @media (max-width: 700px) { .notion-split { grid-template-columns: 1fr; } }
 
   /* === 헤더 === */
   header.topbar {
@@ -1020,13 +1066,24 @@
       <div id="trashList"></div>
     </section>
 
-    <!-- 노션 링크 뷰 -->
+    <!-- 노션/피그마 링크 뷰 -->
     <section id="notionView" style="display:none">
-      <div class="section-header" style="margin-bottom:14px;">
-        <h2>📓 노션 링크</h2>
-        <button class="btn-primary" id="addNotionBtn">+ 추가</button>
+      <div class="notion-split">
+        <div>
+          <div class="notion-col-header">
+            <span class="notion-col-title">📒 Notion</span>
+            <button class="btn-primary" id="addNotionBtn" style="font-size:12px;padding:6px 12px;">+ 추가</button>
+          </div>
+          <div id="notionColNotion"></div>
+        </div>
+        <div>
+          <div class="notion-col-header">
+            <span class="notion-col-title">🎨 Figma</span>
+            <button class="btn-primary" id="addFigmaBtn" style="font-size:12px;padding:6px 12px;">+ 추가</button>
+          </div>
+          <div id="notionColFigma"></div>
+        </div>
       </div>
-      <div id="notionList" style="display:flex; flex-direction:column; gap:10px;"></div>
     </section>
 
 <!-- 모달 -->
@@ -3133,62 +3190,139 @@ function saveNotionLinks(links) {
 
 function renderNotionList() {
   const links = getNotionLinks();
-  const el = $('#notionList');
-  if (!el) return;
-  if (links.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">📓 노션 링크를 추가해보세요</div>`;
-    return;
+  const notionLinks = links.filter(l => (l.category || 'notion') === 'notion');
+  const figmaLinks  = links.filter(l => l.category === 'figma');
+
+  function makeCards(arr, emptyMsg) {
+    if (arr.length === 0) return `<div class="notion-empty">${emptyMsg}</div>`;
+    return arr.map((item, _) => {
+      const i = links.indexOf(item);
+      const icon = item.category === 'figma' ? '🎨' : '📒';
+      const thumbHtml = item.thumb
+        ? `<img class="notion-card-thumb" src="${escapeHtml(item.thumb)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="notion-card-thumb-placeholder" style="display:none;">${icon}</div>`
+        : `<div class="notion-card-thumb-placeholder">${icon}</div>`;
+      return `
+        <div class="notion-card" onclick="window.openNotionLink(${i})">
+          ${thumbHtml}
+          <div class="notion-card-body">
+            <div class="notion-card-title">${escapeHtml(item.title || item.url)}</div>
+            <div class="notion-card-url">${escapeHtml(item.url)}</div>
+            ${item.desc ? `<div class="notion-card-desc">${escapeHtml(item.desc)}</div>` : ''}
+          </div>
+          <div class="notion-card-actions">
+            <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink(${i})">✏️</button>
+            <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink(${i})">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
   }
-  el.innerHTML = links.map((item, i) => `
-    <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
-      <div style="font-size:22px;flex-shrink:0;">📄</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.title || '제목 없음')}</div>
-        <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.url)}</div>
-        ${item.desc ? `<div style="font-size:12px;color:var(--text);margin-top:4px;opacity:0.8;">${escapeHtml(item.desc)}</div>` : ''}
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button class="btn ghost" style="font-size:12px;" onclick="window.open('${escapeHtml(item.url)}','_blank')">열기 ↗</button>
-        <button class="btn ghost" style="font-size:12px;color:var(--muted);" onclick="editNotionLink(${i})">✏️</button>
-        <button class="btn ghost" style="font-size:12px;color:var(--danger);" onclick="deleteNotionLink(${i})">🗑</button>
-      </div>
-    </div>
-  `).join('');
+
+  const notionEl = $('#notionColNotion');
+  const figmaEl  = $('#notionColFigma');
+  if (notionEl) notionEl.innerHTML = makeCards(notionLinks, '📒 노션 링크를 추가해보세요');
+  if (figmaEl)  figmaEl.innerHTML  = makeCards(figmaLinks,  '🎨 피그마 링크를 추가해보세요');
 }
 
-function openNotionModal(idx = -1) {
+async function fetchOgMeta(url) {
+  try {
+    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.status !== 'success') return null;
+    return {
+      title: json.data?.title || '',
+      desc: json.data?.description || '',
+      thumb: json.data?.image?.url || json.data?.logo?.url || '',
+    };
+  } catch { return null; }
+}
+
+function openNotionModal(idx = -1, defaultCategory = 'notion') {
   const links = getNotionLinks();
-  const item = idx >= 0 ? links[idx] : { title: '', url: '', desc: '' };
+  const item = idx >= 0 ? links[idx] : { title: '', url: '', desc: '', thumb: '', category: defaultCategory };
+  const isEdit = idx >= 0;
+  const catLabel = { notion: '📒 Notion', figma: '🎨 Figma' };
+
   openModal(`
-    <h3 style="margin:0 0 16px;font-size:16px;">${idx >= 0 ? '✏️ 링크 수정' : '📓 노션 링크 추가'}</h3>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <input id="nl-title" class="input" placeholder="페이지 제목 (예: 콘텐츠 기획 마스터)" value="${escapeHtml(item.title)}" />
-      <input id="nl-url" class="input" placeholder="https://www.notion.so/..." value="${escapeHtml(item.url)}" />
-      <input id="nl-desc" class="input" placeholder="설명 (선택)" value="${escapeHtml(item.desc || '')}" />
+    <h3 style="margin:0 0 16px;font-size:16px;">${isEdit ? '✏️ 링크 수정' : '+ 링크 추가'}</h3>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="cat-chip ${(item.category||'notion')==='notion'?'active':''}" id="nl-cat-notion" data-cat="notion">📒 Notion</button>
+      <button class="cat-chip ${item.category==='figma'?'active':''}" id="nl-cat-figma" data-cat="figma">🎨 Figma</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="nl-url" class="input" placeholder="URL 붙여넣기…" value="${escapeHtml(item.url)}" style="flex:1;" />
+      <button class="btn" id="nl-fetch" style="white-space:nowrap;padding:0 14px;">자동 인식</button>
+    </div>
+    <div id="nl-preview" style="display:${item.thumb?'flex':'none'};align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px;">
+      <img id="nl-thumb-img" src="${escapeHtml(item.thumb||'')}" style="width:56px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;" />
+      <div style="flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="nl-preview-title">${escapeHtml(item.title||'')}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <input id="nl-title" class="input" placeholder="제목 (비워두면 자동 인식)" value="${escapeHtml(item.title||'')}" />
+      <input id="nl-desc" class="input" placeholder="메모 (선택)" value="${escapeHtml(item.desc||'')}" />
     </div>
     <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
       <button class="btn ghost" data-close>취소</button>
-      <button class="btn-primary" id="nlSaveBtn">${idx >= 0 ? '수정' : '추가'}</button>
+      <button class="btn-primary" id="nlSaveBtn">${isEdit ? '수정' : '추가'}</button>
     </div>
   `);
+
+  let selectedCat = item.category || defaultCategory;
+  let thumbUrl = item.thumb || '';
+
+  $$('#modal [data-cat]').forEach(btn => btn.addEventListener('click', () => {
+    $$('#modal [data-cat]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedCat = btn.dataset.cat;
+  }));
+
+  const urlInput = $('#nl-url');
+  const fetchBtn = $('#nl-fetch');
+  const preview = $('#nl-preview');
+  const thumbImg = $('#nl-thumb-img');
+  const previewTitle = $('#nl-preview-title');
+
+  fetchBtn.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    if (!url) { toast('URL을 먼저 입력하세요', 'error'); return; }
+    fetchBtn.textContent = '…';
+    fetchBtn.disabled = true;
+    const meta = await fetchOgMeta(url);
+    fetchBtn.textContent = '자동 인식';
+    fetchBtn.disabled = false;
+    if (!meta) { toast('메타 정보를 가져오지 못했어요', 'error'); return; }
+    if (meta.title && !$('#nl-title').value.trim()) $('#nl-title').value = meta.title;
+    if (meta.desc && !$('#nl-desc').value.trim()) $('#nl-desc').value = meta.desc;
+    if (meta.thumb) {
+      thumbUrl = meta.thumb;
+      thumbImg.src = meta.thumb;
+      previewTitle.textContent = meta.title || url;
+      preview.style.display = 'flex';
+    }
+    toast('타이틀·썸네일 인식됨 ✓', 'success');
+  });
+
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchBtn.click(); });
+
   $('[data-close]').addEventListener('click', closeModal);
-  $('#nl-title').focus();
   $('#nlSaveBtn').addEventListener('click', () => {
+    const url = urlInput.value.trim();
     const title = $('#nl-title').value.trim();
-    const url = $('#nl-url').value.trim();
     const desc = $('#nl-desc').value.trim();
     if (!url) { toast('URL을 입력해주세요', 'error'); return; }
-    const links = getNotionLinks();
-    if (idx >= 0) links[idx] = { title: title || url, url, desc };
-    else links.unshift({ title: title || url, url, desc });
-    saveNotionLinks(links);
+    const allLinks = getNotionLinks();
+    const entry = { title: title || url, url, desc, thumb: thumbUrl, category: selectedCat };
+    if (isEdit) allLinks[idx] = entry;
+    else allLinks.unshift(entry);
+    saveNotionLinks(allLinks);
     closeModal();
     renderNotionList();
-    toast(idx >= 0 ? '수정됨' : '추가됨', 'success');
+    toast(isEdit ? '수정됨' : '추가됨', 'success');
   });
 }
 
-window.editNotionLink = (i) => openNotionModal(i);
+window.openNotionLink = (i) => { const l = getNotionLinks()[i]; if (l) window.open(l.url, '_blank'); };
+window.editNotionLink  = (i) => openNotionModal(i);
 window.deleteNotionLink = (i) => {
   if (!confirm('삭제할까요?')) return;
   const links = getNotionLinks();
@@ -3198,30 +3332,32 @@ window.deleteNotionLink = (i) => {
   toast('삭제됨');
 };
 
-$('#addNotionBtn')?.addEventListener('click', () => openNotionModal());
+$('#addNotionBtn')?.addEventListener('click', () => openNotionModal(-1, 'notion'));
+$('#addFigmaBtn')?.addEventListener('click',  () => openNotionModal(-1, 'figma'));
 
 /* ============================================================
  * 미션 배너
  * ============================================================ */
 function getMissionItem() {
-  return teamItems.find(x => x.type === 'mission');
+  return teamItems.find(x => x.type === 'mission' && !x.data?.deleted);
 }
 
 function renderMission() {
-  const item = getMissionItem();
   const el = $('#missionText');
   if (!el) return;
-  el.textContent = item?.data?.text || '클릭하여 팀 목표를 입력하세요 ✦';
+  const item = getMissionItem();
+  const text = item?.data?.text || localStorage.getItem('wpmt_mission_text') || '';
+  el.textContent = text || '클릭하여 팀 목표를 입력하세요 ✦';
 }
 
 async function saveMission(text) {
+  localStorage.setItem('wpmt_mission_text', text);
+  renderMission();
   const existing = getMissionItem();
   if (existing) {
-    const ok = await updateTeamItem(existing.id, { text });
-    if (ok) renderMission();
+    await updateTeamItem(existing.id, { text });
   } else {
-    const result = await addTeamItem('mission', { text });
-    if (result) renderMission();
+    await addTeamItem('mission', { text });
   }
 }
 
