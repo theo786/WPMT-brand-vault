@@ -1442,6 +1442,9 @@ function updateDriveStatus(connected, label) {
 
 function isDriveConnected() { return driveConnected; }
 
+function getDriveLoginHint() { return localStorage.getItem('wpmt_drive_login_hint') || ''; }
+function setDriveLoginHint(email) { if (email) localStorage.setItem('wpmt_drive_login_hint', email); }
+
 function ensureDriveToken(forcePopup = false) {
   if (!forcePopup && driveToken && Date.now() < driveToken.expires_at) {
     return Promise.resolve(driveToken.access_token);
@@ -1450,15 +1453,26 @@ function ensureDriveToken(forcePopup = false) {
   if (!clientId) return Promise.reject(new Error('no_client_id'));
   return new Promise((resolve, reject) => {
     if (!window.google?.accounts?.oauth2) { reject(new Error('gis_not_loaded')); return; }
+    const loginHint = getDriveLoginHint();
     const client = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: DRIVE_SCOPE,
-      callback: (resp) => {
+      hint: loginHint || undefined,
+      callback: async (resp) => {
         if (resp.error) { reject(new Error(resp.error)); return; }
         driveToken = {
           access_token: resp.access_token,
           expires_at: Date.now() + (parseInt(resp.expires_in) - 60) * 1000,
         };
+        // 계정 이메일 저장 (다음 자동연결용)
+        if (!loginHint) {
+          try {
+            const info = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+              headers: { Authorization: `Bearer ${resp.access_token}` }
+            }).then(r => r.json());
+            setDriveLoginHint(info.email);
+          } catch {}
+        }
         resolve(driveToken.access_token);
       },
     });
