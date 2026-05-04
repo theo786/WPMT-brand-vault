@@ -892,7 +892,9 @@
       <button data-tab="filevault">📂 파일보관함</button>
       <button data-tab="random">✨ 랜덤뽑기</button>
       <button data-tab="notion">📓 노션</button>
+      <button data-tab="figma">🎨 피그마</button>
       <button data-tab="trash">🗑 휴지통</button>
+      <button data-tab="settings" style="margin-left:auto;">⚙️ 설정</button>
     </div>
 
     <!-- 콘텐츠 스케줄 뷰 -->
@@ -1088,12 +1090,24 @@
         </div>
         <div class="notion-grid" id="notionColNotion"></div>
       </div>
+    </section>
+
+    <section id="figmaView" style="display:none">
       <div class="notion-section">
         <div class="notion-col-header">
           <span class="notion-col-title">🎨 Figma</span>
           <button class="btn-primary" id="addFigmaBtn" style="font-size:12px;padding:6px 12px;">+ 추가</button>
         </div>
         <div class="figma-grid" id="notionColFigma"></div>
+      </div>
+    </section>
+
+    <section id="settingsView" style="display:none">
+      <div class="block" style="max-width:520px;margin:0 auto;">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">⚙️ 탭 이름 수정</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">탭 이름을 원하는 대로 변경할 수 있어요. 이모지 포함 가능.</p>
+        <div id="tabNameEditors" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button class="btn-primary" id="saveTabNamesBtn" style="margin-top:20px;width:100%;">저장</button>
       </div>
     </section>
 
@@ -1387,6 +1401,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 });
 
 (async () => {
+  renderMission();
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) initApp(session.user);
   else showApp(false);
@@ -1992,13 +2007,17 @@ function switchTab(tab) {
   $('#filevaultView').style.display     = tab === 'filevault'   ? 'block' : 'none';
   $('#randomView').style.display        = tab === 'random'      ? 'block' : 'none';
   $('#notionView').style.display        = tab === 'notion'      ? 'block' : 'none';
+  $('#figmaView').style.display         = tab === 'figma'       ? 'block' : 'none';
   $('#trashView').style.display         = tab === 'trash'       ? 'block' : 'none';
+  $('#settingsView').style.display      = tab === 'settings'    ? 'block' : 'none';
   if (tab === 'schedule')   renderContentSchedule();
   if (tab === 'tasks')      renderTasks();
   if (tab === 'minutes')    renderMinutes();
   if (tab === 'seminotion') renderNoteList();
   if (tab === 'notion')     renderNotionList();
+  if (tab === 'figma')      renderNotionList();
   if (tab === 'trash')      renderTrash();
+  if (tab === 'settings')   renderSettingsTab();
   if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
@@ -2044,29 +2063,6 @@ $$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.da
 
   tabsEl.querySelectorAll('button[data-tab]').forEach(btn => {
     btn.draggable = true;
-
-    btn.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      const current = btn.textContent;
-      const input = document.createElement('input');
-      input.value = current;
-      input.style.cssText = 'width:90px;background:var(--panel-2);border:1px solid var(--accent);border-radius:6px;padding:2px 6px;color:var(--text);font-size:13px;font-family:inherit;';
-      btn.textContent = '';
-      btn.appendChild(input);
-      input.focus();
-      input.select();
-      const finish = () => {
-        const val = input.value.trim() || current;
-        btn.textContent = val;
-        saveTabNames();
-      };
-      input.addEventListener('blur', finish);
-      input.addEventListener('keydown', e2 => {
-        if (e2.key === 'Enter') { input.blur(); }
-        if (e2.key === 'Escape') { input.value = current; input.blur(); }
-        e2.stopPropagation();
-      });
-    });
 
     btn.addEventListener('dragstart', (e) => {
       dragSrc = btn;
@@ -2993,6 +2989,9 @@ $('#snoteCloseBtn')?.addEventListener('click', async () => {
   const wrap = $('#snoteEditorWrap');
   if (empty) empty.style.display = 'flex';
   if (wrap) wrap.style.display = 'none';
+  // 모바일에서 사이드바 복귀
+  const sidebar = document.querySelector('#seminotionView .snote-sidebar');
+  if (sidebar && window.innerWidth <= 700) sidebar.style.display = 'flex';
   renderNoteList();
 });
 
@@ -3226,6 +3225,50 @@ function renderAll() {
   renderFileGrid();
   updateFileCounts();
   renderContentSchedule();
+}
+
+/* ============================================================
+ * 설정 탭
+ * ============================================================ */
+function renderSettingsTab() {
+  const tabsEl = document.querySelector('.tabs');
+  const container = $('#tabNameEditors');
+  if (!container || !tabsEl) return;
+
+  const saved = JSON.parse(localStorage.getItem('wpmt_tab_names') || '{}');
+  const SKIP = ['settings'];
+  const btns = [...tabsEl.querySelectorAll('button[data-tab]')]
+    .filter(b => !SKIP.includes(b.dataset.tab));
+
+  container.innerHTML = btns.map(b => {
+    const key = b.dataset.tab;
+    const current = saved[key] || b.textContent;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-size:12px;color:var(--muted);width:80px;flex-shrink:0;">${key}</label>
+        <input data-tabkey="${key}" value="${escapeHtml(current)}"
+          style="flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;
+                 padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit;" />
+      </div>`;
+  }).join('');
+
+  const saveBtn = $('#saveTabNamesBtn');
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const names = {};
+      container.querySelectorAll('input[data-tabkey]').forEach(inp => {
+        const key = inp.dataset.tabkey;
+        const val = inp.value.trim();
+        if (val) {
+          names[key] = val;
+          const btn = tabsEl.querySelector(`button[data-tab="${key}"]`);
+          if (btn) btn.textContent = val;
+        }
+      });
+      localStorage.setItem('wpmt_tab_names', JSON.stringify(names));
+      toast('탭 이름 저장됨 ✓');
+    };
+  }
 }
 
 /* ============================================================
