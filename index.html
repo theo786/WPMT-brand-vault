@@ -909,7 +909,7 @@
     </div>
 
     <!-- 콘텐츠 스케줄 뷰 -->
-    <section id="scheduleView">
+    <section id="scheduleView" style="display:none">
       <div class="section-header">
         <h2>📅 스케줄</h2>
         <button class="btn-primary" id="addContentBtn">+ 추가</button>
@@ -1422,6 +1422,7 @@ async function initApp(user) {
   currentUser = user;
   $('#userEmail').textContent = user.email || '';
   showApp(true);
+  switchTab('tasks');
   await Promise.all([Storage.pull(), loadTeamBoard()]);
   await purgeOldTrash();
   renderAll();
