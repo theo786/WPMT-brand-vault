@@ -765,6 +765,20 @@
   }
   .nli-btn:hover { color: var(--text); border-color: var(--accent); }
   .nli-btn.del:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* 공유 정보 */
+  .si-cat-filter { padding:4px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; cursor:pointer; transition:.15s; }
+  .si-cat-filter.active, .si-cat-filter:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .si-group { margin-bottom:20px; }
+  .si-group-title { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+  .si-item { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:flex-start; gap:12px; margin-bottom:8px; }
+  .si-item:hover .si-actions { opacity:1; }
+  .si-label { font-size:13px; font-weight:600; color:var(--text); min-width:110px; flex-shrink:0; }
+  .si-value-wrap { flex:1; min-width:0; }
+  .si-value { font-size:13px; color:var(--text); word-break:break-all; cursor:pointer; }
+  .si-value:hover { color:var(--accent); }
+  .si-note { font-size:11px; color:var(--muted); margin-top:3px; }
+  .si-actions { opacity:0; display:flex; gap:4px; flex-shrink:0; transition:.15s; }
   .snote-editor-panel {
     display: flex; flex-direction: column; overflow: hidden; background: var(--panel);
   }
@@ -905,6 +919,7 @@
       <button data-tab="notion">📓 노션</button>
       <button data-tab="figma">🎨 피그마</button>
       <button data-tab="trash">🗑 휴지통</button>
+      <button data-tab="sharedinfo">🔐 공유정보</button>
       <button data-tab="settings" style="margin-left:auto;">⚙️ 설정</button>
     </div>
 
@@ -1111,6 +1126,15 @@
         </div>
         <div class="figma-grid" id="notionColFigma"></div>
       </div>
+    </section>
+
+    <section id="sharedinfoView" style="display:none">
+      <div class="section-header">
+        <h2>🔐 공유 정보</h2>
+        <button class="btn-primary" id="addSharedInfoBtn">+ 추가</button>
+      </div>
+      <div id="sharedInfoCats" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      <div id="sharedInfoList"></div>
     </section>
 
     <section id="settingsView" style="display:none">
@@ -2043,15 +2067,17 @@ function switchTab(tab) {
   $('#notionView').style.display        = tab === 'notion'      ? 'block' : 'none';
   $('#figmaView').style.display         = tab === 'figma'       ? 'block' : 'none';
   $('#trashView').style.display         = tab === 'trash'       ? 'block' : 'none';
+  $('#sharedinfoView').style.display    = tab === 'sharedinfo'  ? 'block' : 'none';
   $('#settingsView').style.display      = tab === 'settings'    ? 'block' : 'none';
-  if (tab === 'schedule')   renderContentSchedule();
-  if (tab === 'tasks')      renderTasks();
-  if (tab === 'minutes')    renderMinutes();
-  if (tab === 'seminotion') renderNoteList();
-  if (tab === 'notion')     renderNotionList();
-  if (tab === 'figma')      renderNotionList();
-  if (tab === 'trash')      renderTrash();
-  if (tab === 'settings')   renderSettingsTab();
+  if (tab === 'schedule')    renderContentSchedule();
+  if (tab === 'tasks')       renderTasks();
+  if (tab === 'minutes')     renderMinutes();
+  if (tab === 'seminotion')  renderNoteList();
+  if (tab === 'notion')      renderNotionList();
+  if (tab === 'figma')       renderNotionList();
+  if (tab === 'trash')       renderTrash();
+  if (tab === 'settings')    renderSettingsTab();
+  if (tab === 'sharedinfo')  loadAndRenderSharedInfo();
   if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
@@ -3366,6 +3392,120 @@ function renderSettingsTab() {
     };
   }
 }
+
+/* ============================================================
+ * 공유 정보
+ * ============================================================ */
+let sharedInfoData = [];
+let siActiveCat = '전체';
+
+async function loadAndRenderSharedInfo() {
+  const { data, error } = await supabase.from('wpmt_shared_info').select('*').order('category').order('created_at');
+  if (error) { console.error(error); return; }
+  sharedInfoData = data || [];
+  renderSharedInfo();
+}
+
+function renderSharedInfo() {
+  const cats = ['전체', ...new Set(sharedInfoData.map(i => i.category))];
+  const catEl = $('#sharedInfoCats');
+  catEl.innerHTML = cats.map(c =>
+    `<button class="si-cat-filter ${c === siActiveCat ? 'active' : ''}" data-sicat="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+  ).join('');
+  catEl.querySelectorAll('.si-cat-filter').forEach(b => {
+    b.addEventListener('click', () => { siActiveCat = b.dataset.sicat; renderSharedInfo(); });
+  });
+
+  const filtered = siActiveCat === '전체' ? sharedInfoData : sharedInfoData.filter(i => i.category === siActiveCat);
+  const grouped = {};
+  filtered.forEach(i => { (grouped[i.category] = grouped[i.category] || []).push(i); });
+
+  const listEl = $('#sharedInfoList');
+  if (!filtered.length) { listEl.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:20px 0;">등록된 정보가 없습니다.</div>`; return; }
+
+  listEl.innerHTML = Object.entries(grouped).map(([cat, items]) => `
+    <div class="si-group">
+      <div class="si-group-title">${escapeHtml(cat)}</div>
+      ${items.map(i => `
+        <div class="si-item" data-siid="${i.id}">
+          <div class="si-label">${escapeHtml(i.label)}</div>
+          <div class="si-value-wrap">
+            <div class="si-value" title="클릭하여 복사" data-copy="${escapeHtml(i.value)}">${escapeHtml(i.value)}</div>
+            ${i.note ? `<div class="si-note">${escapeHtml(i.note)}</div>` : ''}
+          </div>
+          <div class="si-actions">
+            <button class="nli-btn" data-si-edit="${i.id}">✏️</button>
+            <button class="nli-btn del" data-si-del="${i.id}">🗑</button>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+
+  listEl.querySelectorAll('.si-value[data-copy]').forEach(el => {
+    el.addEventListener('click', () => {
+      navigator.clipboard.writeText(el.dataset.copy).then(() => toast('복사됨 ✓', 'success'));
+    });
+  });
+  listEl.querySelectorAll('[data-si-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openSharedInfoModal(sharedInfoData.find(i => i.id === btn.dataset.siEdit)));
+  });
+  listEl.querySelectorAll('[data-si-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('삭제할까요?')) return;
+      await supabase.from('wpmt_shared_info').delete().eq('id', btn.dataset.siDel);
+      await loadAndRenderSharedInfo();
+      toast('삭제됨', 'success');
+    });
+  });
+}
+
+function openSharedInfoModal(item = null) {
+  const cats = [...new Set(sharedInfoData.map(i => i.category)), '계정정보', '주소', '기타'].filter((v, i, a) => a.indexOf(v) === i);
+  const isEdit = !!item;
+  openModal(`
+    <h3 style="margin:0 0 14px;font-size:16px;">${isEdit ? '✏️ 정보 수정' : '🔐 공유 정보 추가'}</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">카테고리</label>
+        <input id="si-cat" list="si-cat-list" value="${escapeHtml(item?.category || '')}" placeholder="계정정보, 주소, 기타 등" style="width:100%;box-sizing:border-box;" />
+        <datalist id="si-cat-list">${cats.map(c => `<option value="${escapeHtml(c)}">`).join('')}</datalist>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">항목명</label>
+        <input id="si-label" value="${escapeHtml(item?.label || '')}" placeholder="예: 인스타그램 아이디" style="width:100%;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">내용</label>
+        <input id="si-value" value="${escapeHtml(item?.value || '')}" placeholder="계정 / 비밀번호 / 주소 등" style="width:100%;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">비고</label>
+        <input id="si-note" value="${escapeHtml(item?.note || '')}" placeholder="메모 (선택)" style="width:100%;box-sizing:border-box;" />
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn ghost" data-close>취소</button>
+      <button class="btn" id="si-save">저장</button>
+    </div>
+  `);
+  $('[data-close]').addEventListener('click', closeModal);
+  $('#si-save').addEventListener('click', async () => {
+    const cat = $('#si-cat').value.trim() || '기타';
+    const label = $('#si-label').value.trim();
+    const value = $('#si-value').value.trim();
+    const note = $('#si-note').value.trim();
+    if (!label || !value) { toast('항목명과 내용을 입력하세요', 'error'); return; }
+    if (isEdit) {
+      await supabase.from('wpmt_shared_info').update({ category: cat, label, value, note, updated_at: new Date().toISOString() }).eq('id', item.id);
+    } else {
+      await supabase.from('wpmt_shared_info').insert({ category: cat, label, value, note });
+    }
+    closeModal();
+    await loadAndRenderSharedInfo();
+    toast(isEdit ? '수정됨 ✓' : '추가됨 ✓', 'success');
+  });
+}
+
+$('#addSharedInfoBtn')?.addEventListener('click', () => openSharedInfoModal());
 
 /* ============================================================
  * 노션 링크
