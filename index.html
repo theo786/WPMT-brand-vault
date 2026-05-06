@@ -795,6 +795,16 @@
   .nli-btn.del:hover { color: var(--danger); border-color: var(--danger); }
 
   /* 공유 정보 */
+  .si-mode-btn {
+    flex:1; background:var(--panel-3); border:1px solid var(--border);
+    color:var(--muted); padding:8px 10px; border-radius:8px;
+    font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+    transition:.15s;
+  }
+  .si-mode-btn:hover { color:var(--text); border-color:var(--accent); }
+  .si-mode-btn.active {
+    background:var(--accent); color:#181014; border-color:var(--accent);
+  }
   .si-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
   .si-item {
     background:var(--panel-2); border:1px solid var(--border); border-radius:12px;
@@ -806,10 +816,14 @@
   .si-label { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.04em; text-transform:uppercase; }
   .si-value {
     font-size:14px; font-weight:600; color:var(--accent);
-    word-break:break-all; user-select:text; cursor:text; line-height:1.4;
+    overflow-wrap:anywhere; word-break:break-word;
+    user-select:text; cursor:text; line-height:1.4;
     white-space:pre-wrap;
   }
-  .si-note { font-size:12px; color:var(--text); user-select:text; word-break:break-all; white-space:pre-wrap; }
+  .si-note {
+    font-size:12px; color:var(--text); user-select:text;
+    overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap;
+  }
   .si-copy-btn {
     position:absolute; top:10px; right:36px;
     background:none; border:none; color:var(--muted); font-size:12px;
@@ -3653,10 +3667,18 @@ function renderSharedInfo() {
 }
 
 function parseAccountValue(v) {
-  // "ID: xxx\nPW: yyy" 형태 파싱 → { id, pw }
-  const out = { id: '', pw: '' };
+  // 두 가지 형태:
+  //   "Google 로그인: xxx@gmail.com" → { mode:'google', google:'xxx@gmail.com' }
+  //   "ID: xxx\nPW: yyy"             → { mode:'idpw',   id, pw }
+  const out = { mode: 'idpw', id: '', pw: '', google: '' };
   if (!v) return out;
   const lines = v.split(/\r?\n/);
+  const gLine = lines.find(l => /^\s*(Google\s*로그인|구글\s*로그인)\s*:/i.test(l));
+  if (gLine) {
+    out.mode = 'google';
+    out.google = gLine.replace(/^\s*(Google\s*로그인|구글\s*로그인)\s*:\s*/i, '').trim();
+    return out;
+  }
   for (const line of lines) {
     const m = line.match(/^\s*(ID|PW)\s*:\s*(.*)$/i);
     if (!m) continue;
@@ -3689,7 +3711,7 @@ function openSharedInfoModal(item = null) {
       <div id="si-fields-wrap"></div>
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">설명 <span style="font-weight:400;opacity:.5;">(선택)</span></label>
-        <input id="si-note" value="${escapeHtml(item?.note || '')}" placeholder="추가 설명" style="width:100%;box-sizing:border-box;" />
+        <textarea id="si-note" placeholder="추가 설명 (여러 줄 가능)" style="width:100%;box-sizing:border-box;min-height:90px;resize:vertical;font-family:inherit;line-height:1.5;">${escapeHtml(item?.note || '')}</textarea>
       </div>
     </div>
     <div class="modal-actions" style="margin-top:18px;">
@@ -3698,21 +3720,52 @@ function openSharedInfoModal(item = null) {
     </div>
   `);
 
+  let accMode = acc.mode || 'idpw';
+
+  function renderAccountFields() {
+    const idpwBlock = `
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">ID</label>
+        <input id="si-id" value="${escapeHtml(acc.id)}" placeholder="아이디" style="width:100%;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">PW</label>
+        <input id="si-pw" value="${escapeHtml(acc.pw)}" placeholder="비밀번호" style="width:100%;box-sizing:border-box;" />
+      </div>`;
+    const googleBlock = `
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">구글 계정</label>
+        <input id="si-google" value="${escapeHtml(acc.google)}" placeholder="예: example@gmail.com" style="width:100%;box-sizing:border-box;" />
+      </div>`;
+    return `
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button type="button" class="si-mode-btn ${accMode === 'idpw' ? 'active' : ''}" data-mode="idpw">🔑 ID/PW</button>
+        <button type="button" class="si-mode-btn ${accMode === 'google' ? 'active' : ''}" data-mode="google">🟢 구글 로그인</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${accMode === 'google' ? googleBlock : idpwBlock}
+      </div>
+    `;
+  }
+
   function renderFields(cat) {
     const wrap = $('#si-fields-wrap');
     if (cat === '계정정보') {
-      wrap.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">ID</label>
-            <input id="si-id" value="${escapeHtml(acc.id)}" placeholder="아이디" style="width:100%;box-sizing:border-box;" />
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">PW</label>
-            <input id="si-pw" value="${escapeHtml(acc.pw)}" placeholder="비밀번호" style="width:100%;box-sizing:border-box;" />
-          </div>
-        </div>
-      `;
+      wrap.innerHTML = renderAccountFields();
+      wrap.querySelectorAll('.si-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // 기존 입력값을 acc에 흡수해두고 모드 전환
+          if (accMode === 'idpw') {
+            acc.id = ($('#si-id')?.value || '').trim();
+            acc.pw = ($('#si-pw')?.value || '').trim();
+          } else if (accMode === 'google') {
+            acc.google = ($('#si-google')?.value || '').trim();
+          }
+          accMode = btn.dataset.mode;
+          wrap.innerHTML = renderAccountFields();
+          renderFields('계정정보'); // 이벤트 재바인딩
+        });
+      });
     } else {
       const initialValue = labelLockedToAccount ? '' : (item?.value || '');
       wrap.innerHTML = `
@@ -3732,13 +3785,19 @@ function openSharedInfoModal(item = null) {
     const note = $('#si-note').value.trim();
     let value = '';
     if (cat === '계정정보') {
-      const id = ($('#si-id')?.value || '').trim();
-      const pw = ($('#si-pw')?.value || '').trim();
-      if (!id && !pw) { toast('ID 또는 PW를 입력하세요', 'error'); return; }
-      const lines = [];
-      if (id) lines.push(`ID: ${id}`);
-      if (pw) lines.push(`PW: ${pw}`);
-      value = lines.join('\n');
+      if (accMode === 'google') {
+        const g = ($('#si-google')?.value || '').trim();
+        if (!g) { toast('구글 계정을 입력하세요', 'error'); return; }
+        value = `Google 로그인: ${g}`;
+      } else {
+        const id = ($('#si-id')?.value || '').trim();
+        const pw = ($('#si-pw')?.value || '').trim();
+        if (!id && !pw) { toast('ID 또는 PW를 입력하세요', 'error'); return; }
+        const lines = [];
+        if (id) lines.push(`ID: ${id}`);
+        if (pw) lines.push(`PW: ${pw}`);
+        value = lines.join('\n');
+      }
     } else {
       value = ($('#si-value')?.value || '').trim();
       if (!value) { toast('내용을 입력하세요', 'error'); return; }
