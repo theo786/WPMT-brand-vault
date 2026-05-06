@@ -364,6 +364,10 @@
     color: var(--muted) !important;
   }
   .cat-add-btn:hover { opacity: 1; color: var(--accent) !important; }
+  .cat-chip[draggable="true"] { cursor: grab; }
+  .cat-chip[draggable="true"]:active { cursor: grabbing; }
+  .cat-chip.cat-dragging { opacity: 0.4; }
+  .cat-chip.cat-drag-over { box-shadow: -3px 0 0 var(--accent); }
 
   /* === 카드 그리드 === */
   .grid {
@@ -1711,7 +1715,11 @@ async function addBookmark() {
   const raw = $('#urlInput').value.trim();
   if (!raw) { toast('URL을 입력해주세요', 'error'); return; }
   const url = normalizeUrl(raw);
-  const cat = $('#categorySelect').value;
+  // 활성 카테고리 칩이 있으면 그걸 우선, 아니면 select 값
+  const cats = getCategories();
+  const cat = (activeCategory !== 'all' && cats.includes(activeCategory))
+    ? activeCategory
+    : ($('#categorySelect').value || cats[0] || '기타');
   const handle = extractHandle(url);
   const host = hostOf(url);
 
@@ -1734,9 +1742,10 @@ async function addBookmark() {
   bookmarks.unshift(item);
   $('#urlInput').value = '';
   Storage.scheduleSave();
+  renderCategories();
   renderBookmarks();
   renderRecent();
-  toast('추가됨 — 제목 자동 추출 중…', 'success');
+  toast(`'${cat}'에 추가됨 — 제목 자동 추출 중…`, 'success');
 
   // oEmbed로 더 좋은 제목 시도 (백그라운드)
   fetchTitleViaOembed(url).then(title => {
@@ -1897,7 +1906,7 @@ function renderCategories() {
   let html = `<button class="cat-chip ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">전체 <span class="n">${total}</span></button>`;
   for (const c of cats) {
     const n = bookmarks.filter(b => b.category === c).length;
-    html += `<button class="cat-chip ${activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">
+    html += `<button class="cat-chip ${activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}" draggable="true">
       <span class="cat-name">${escapeHtml(c)}</span>
       <span class="n">${n}</span>
       <span class="cat-edit" data-cat-edit="${escapeHtml(c)}" title="이름 수정">✏️</span>
@@ -1926,9 +1935,52 @@ function renderCategories() {
       deleteCategoryPrompt(el.dataset.catDel);
     });
   });
+  // 드래그 정렬 (커스텀 카테고리 칩만, '전체'/'+카테고리' 제외)
+  row.querySelectorAll('.cat-chip[draggable="true"]').forEach(b => {
+    if (b.dataset.cat === 'all') return;
+    b.addEventListener('dragstart', (e) => {
+      dragSrcCat = b.dataset.cat;
+      b.classList.add('cat-dragging');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', b.dataset.cat); } catch {}
+    });
+    b.addEventListener('dragend', () => {
+      b.classList.remove('cat-dragging');
+      row.querySelectorAll('.cat-drag-over').forEach(el => el.classList.remove('cat-drag-over'));
+      dragSrcCat = null;
+    });
+    b.addEventListener('dragover', (e) => {
+      if (!dragSrcCat || b.dataset.cat === 'all' || b.dataset.cat === dragSrcCat) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      b.classList.add('cat-drag-over');
+    });
+    b.addEventListener('dragleave', () => {
+      b.classList.remove('cat-drag-over');
+    });
+    b.addEventListener('drop', (e) => {
+      e.preventDefault();
+      b.classList.remove('cat-drag-over');
+      const target = b.dataset.cat;
+      if (!dragSrcCat || target === 'all' || target === dragSrcCat) return;
+      reorderCategory(dragSrcCat, target);
+    });
+  });
   const addBtn = $('#catAddBtn');
   if (addBtn) addBtn.addEventListener('click', addCategoryPrompt);
   refreshCategorySelect();
+}
+
+let dragSrcCat = null;
+function reorderCategory(srcName, targetName) {
+  const cats = [...refCategories];
+  const srcIdx = cats.indexOf(srcName);
+  if (srcIdx < 0) return;
+  cats.splice(srcIdx, 1);
+  const newTargetIdx = cats.indexOf(targetName);
+  if (newTargetIdx < 0) return;
+  cats.splice(newTargetIdx, 0, srcName);
+  saveCategories(cats);
+  renderCategories();
 }
 
 function refreshCategorySelect() {
