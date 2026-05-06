@@ -450,6 +450,14 @@
   .modal h3 { margin: 0 0 12px; font-size: 18px; }
   .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   .modal .preview-media { width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; }
+  .modal input, .modal textarea, .modal select {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; color: var(--text);
+    font-size: 13px; font-family: inherit; width: 100%; box-sizing: border-box;
+    outline: none; transition: border-color .15s;
+  }
+  .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--accent); }
+  .modal input::placeholder, .modal textarea::placeholder { color: var(--muted); opacity: .6; }
   .btn { background: var(--accent); color: #181014; border: 0; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; font-family: inherit; }
   .btn.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); font-weight: 500; }
   .btn:hover { filter: brightness(1.1); }
