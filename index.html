@@ -348,6 +348,22 @@
     font-size: 11px; min-width: 18px; text-align: center;
   }
   .cat-chip.active .n { background: rgba(0,0,0,0.25); }
+  .cat-chip .cat-edit, .cat-chip .cat-del {
+    opacity: 0; max-width: 0; overflow: hidden;
+    font-size: 11px; padding: 0; margin: 0;
+    transition: opacity 0.15s, max-width 0.15s;
+    cursor: pointer; user-select: none;
+  }
+  .cat-chip:hover .cat-edit, .cat-chip:hover .cat-del {
+    opacity: 0.7; max-width: 16px;
+  }
+  .cat-chip .cat-edit:hover, .cat-chip .cat-del:hover { opacity: 1; }
+  .cat-chip .cat-del:hover { color: var(--danger); }
+  .cat-add-btn {
+    border-style: dashed !important; opacity: 0.65;
+    color: var(--muted) !important;
+  }
+  .cat-add-btn:hover { opacity: 1; color: var(--accent) !important; }
 
   /* === 카드 그리드 === */
   .grid {
@@ -938,7 +954,7 @@
       <button data-tab="notion">📓 노션</button>
       <button data-tab="figma">🎨 피그마</button>
       <button data-tab="trash">🗑 휴지통</button>
-      <button data-tab="sharedinfo">🔐 공유정보</button>
+      <button data-tab="sharedinfo">🔐 정보</button>
       <button data-tab="settings" style="margin-left:auto;">⚙️ 설정</button>
     </div>
 
@@ -1020,13 +1036,7 @@
     <section id="referenceView" style="display:none">
       <div class="ref-add-row">
         <input id="urlInput" placeholder="URL 붙여넣기…" />
-        <select id="categorySelect">
-          <option value="이미지 프롬프트">이미지 프롬프트</option>
-          <option value="콘텐츠 아이디어">콘텐츠 아이디어</option>
-          <option value="관련 서비스">관련 서비스</option>
-          <option value="굿즈">굿즈</option>
-          <option value="AI ETC">AI ETC</option>
-        </select>
+        <select id="categorySelect"></select>
         <button class="btn-primary" id="addBtn">추가</button>
       </div>
       <div class="cats-row" id="catsRow"></div>
@@ -1149,7 +1159,7 @@
 
     <section id="sharedinfoView" style="display:none">
       <div class="section-header">
-        <h2>🔐 공유 정보</h2>
+        <h2>🔐 정보</h2>
         <button class="btn-primary" id="addSharedInfoBtn">+ 추가</button>
       </div>
       <div id="sharedInfoCats" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
@@ -1193,7 +1203,18 @@ const SUPABASE_URL = 'https://ksuiqtlrcenzedtlxyrb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzdWlxdGxyY2VuemVkdGx4eXJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTQwMDUsImV4cCI6MjA5MjY5MDAwNX0.njN2LI7ipPkTNsm6xoarNuI8yKWLAmSK1Uqvig7Qqpg';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const CATEGORIES = ['이미지 프롬프트', '콘텐츠 아이디어', '관련 서비스', '굿즈', 'AI ETC'];
+const DEFAULT_CATEGORIES = ['이미지 프롬프트', '콘텐츠 아이디어', '관련 서비스', '굿즈', 'AI ETC', '느좋 채널'];
+function getCategories() {
+  if (Array.isArray(refCategories) && refCategories.length) return refCategories;
+  // 시드 fallback (Storage.pull 전에 호출되는 경우 등)
+  const fromBookmarks = Array.isArray(bookmarks) ? [...new Set(bookmarks.map(b => b.category).filter(Boolean))] : [];
+  refCategories = [...new Set([...DEFAULT_CATEGORIES, ...fromBookmarks])];
+  return refCategories;
+}
+function saveCategories(arr) {
+  refCategories = Array.from(arr);
+  Storage.scheduleSave();
+}
 const LOCAL_API = window.location.origin;
 
 const IG_DOWNLOADER_URL = 'http://127.0.0.1:8000';
@@ -1206,6 +1227,7 @@ let currentUser = null;
 let pendingEmail = '';
 
 let bookmarks = [];
+let refCategories = [];
 let driveFolderId = null; // 미사용 (로컬 API)
 let activeCategory = 'all';
 let activeFileFilter = 'all';
@@ -1362,6 +1384,7 @@ const Storage = {
     const { error } = await supabase.from('wpmt_brand_vault').upsert({
       user_id: currentUser.id,
       bookmarks: bookmarks,
+      categories: refCategories,
       drive_folder_id: driveFolderId,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
@@ -1377,7 +1400,14 @@ const Storage = {
     if (error) { console.error('load error:', error); setSync('error'); return false; }
     if (data) {
       bookmarks = Array.isArray(data.bookmarks) ? data.bookmarks : [];
+      refCategories = Array.isArray(data.categories) ? data.categories : [];
       driveFolderId = data.drive_folder_id || null;
+      // 카테고리 비어있으면 시드 (기본값 + 기존 북마크 카테고리)
+      if (refCategories.length === 0) {
+        const fromBookmarks = [...new Set(bookmarks.map(b => b.category).filter(Boolean))];
+        refCategories = [...new Set([...DEFAULT_CATEGORIES, ...fromBookmarks])];
+        Storage.scheduleSave();
+      }
       setSync('synced');
       return true;
     }
@@ -1863,19 +1893,102 @@ async function showRandomPick(file) {
 function renderCategories() {
   const row = $('#catsRow');
   const total = bookmarks.length;
+  const cats = getCategories();
   let html = `<button class="cat-chip ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">전체 <span class="n">${total}</span></button>`;
-  for (const c of CATEGORIES) {
+  for (const c of cats) {
     const n = bookmarks.filter(b => b.category === c).length;
-    html += `<button class="cat-chip ${activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)} <span class="n">${n}</span></button>`;
+    html += `<button class="cat-chip ${activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">
+      <span class="cat-name">${escapeHtml(c)}</span>
+      <span class="n">${n}</span>
+      <span class="cat-edit" data-cat-edit="${escapeHtml(c)}" title="이름 수정">✏️</span>
+      <span class="cat-del" data-cat-del="${escapeHtml(c)}" title="삭제">✕</span>
+    </button>`;
   }
+  html += `<button class="cat-chip cat-add-btn" id="catAddBtn" title="카테고리 추가">+ 카테고리</button>`;
   row.innerHTML = html;
   row.querySelectorAll('.cat-chip').forEach(b => {
-    b.addEventListener('click', () => {
+    b.addEventListener('click', (e) => {
+      if (e.target.closest('.cat-edit') || e.target.closest('.cat-del') || b.id === 'catAddBtn') return;
       activeCategory = b.dataset.cat;
       renderCategories();
       renderBookmarks();
     });
   });
+  row.querySelectorAll('[data-cat-edit]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      renameCategoryPrompt(el.dataset.catEdit);
+    });
+  });
+  row.querySelectorAll('[data-cat-del]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteCategoryPrompt(el.dataset.catDel);
+    });
+  });
+  const addBtn = $('#catAddBtn');
+  if (addBtn) addBtn.addEventListener('click', addCategoryPrompt);
+  refreshCategorySelect();
+}
+
+function refreshCategorySelect() {
+  const sel = $('#categorySelect');
+  if (!sel) return;
+  const current = sel.value;
+  const cats = getCategories();
+  sel.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if (cats.includes(current)) sel.value = current;
+}
+
+function addCategoryPrompt() {
+  const name = (prompt('새 카테고리 이름:') || '').trim();
+  if (!name) return;
+  const cats = getCategories();
+  if (cats.includes(name)) { toast('이미 있는 카테고리예요', 'error'); return; }
+  cats.push(name);
+  saveCategories(cats);
+  renderCategories();
+  toast('카테고리 추가됨 ✓', 'success');
+}
+
+function renameCategoryPrompt(oldName) {
+  const newName = (prompt('카테고리 새 이름:', oldName) || '').trim();
+  if (!newName || newName === oldName) return;
+  const cats = getCategories();
+  if (cats.includes(newName)) { toast('이미 있는 이름이에요', 'error'); return; }
+  const idx = cats.indexOf(oldName);
+  if (idx < 0) return;
+  cats[idx] = newName;
+  saveCategories(cats);
+  // 해당 카테고리 북마크들 재태깅
+  let changed = 0;
+  bookmarks.forEach(b => { if (b.category === oldName) { b.category = newName; changed++; } });
+  if (activeCategory === oldName) activeCategory = newName;
+  if (changed) Storage.scheduleSave();
+  renderCategories();
+  renderBookmarks();
+  toast('이름 변경됨 ✓', 'success');
+}
+
+function deleteCategoryPrompt(name) {
+  const cats = getCategories();
+  const count = bookmarks.filter(b => b.category === name).length;
+  const fallback = cats.find(c => c !== name) || '기타';
+  const msg = count > 0
+    ? `'${name}' 카테고리를 삭제할까요?\n속한 북마크 ${count}개는 '${fallback}'(으)로 이동돼요.`
+    : `'${name}' 카테고리를 삭제할까요?`;
+  if (!confirm(msg)) return;
+  const next = cats.filter(c => c !== name);
+  if (next.length === 0) { toast('최소 1개는 남겨두세요', 'error'); return; }
+  saveCategories(next);
+  if (count > 0) {
+    bookmarks.forEach(b => { if (b.category === name) b.category = fallback; });
+    Storage.scheduleSave();
+  }
+  if (activeCategory === name) activeCategory = 'all';
+  renderCategories();
+  renderBookmarks();
+  toast('삭제됨 ✓', 'success');
 }
 
 /* ============================================================
@@ -3466,23 +3579,44 @@ function renderSharedInfo() {
   });
 }
 
+function parseAccountValue(v) {
+  // "ID: xxx\nPW: yyy" 형태 파싱 → { id, pw }
+  const out = { id: '', pw: '' };
+  if (!v) return out;
+  const lines = v.split(/\r?\n/);
+  for (const line of lines) {
+    const m = line.match(/^\s*(ID|PW)\s*:\s*(.*)$/i);
+    if (!m) continue;
+    if (m[1].toUpperCase() === 'ID') out.id = m[2].trim();
+    else out.pw = m[2].trim();
+  }
+  return out;
+}
+
 function openSharedInfoModal(item = null) {
-  const cats = [...new Set(sharedInfoData.map(i => i.category)), '계정정보', '주소', '기타'].filter((v, i, a) => a.indexOf(v) === i);
+  const baseCats = [...new Set([...sharedInfoData.map(i => i.category), '계정정보', '주소', '기타'])];
   const isEdit = !!item;
+  const initCat = item?.category || '계정정보';
+  const labelLockedToAccount = initCat === '계정정보';
+  const acc = labelLockedToAccount ? parseAccountValue(item?.value || '') : { id: '', pw: '' };
+
+  const catOptions = baseCats.map(c => `<option value="${escapeHtml(c)}" ${c === initCat ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+
   openModal(`
-    <h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">${isEdit ? '✏️ 정보 수정' : '🔐 공유 정보 추가'}</h3>
+    <h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">${isEdit ? '✏️ 정보 수정' : '🔐 정보 추가'}</h3>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">카테고리</label>
+        <select id="si-category" style="width:100%;box-sizing:border-box;">${catOptions}</select>
+      </div>
+      <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">항목명</label>
-        <input id="si-label" value="${escapeHtml(item?.label || '')}" placeholder="예: 인스타그램 아이디" style="width:100%;box-sizing:border-box;" />
+        <input id="si-label" value="${escapeHtml(item?.label || '')}" placeholder="예: 인스타그램" style="width:100%;box-sizing:border-box;" />
       </div>
+      <div id="si-fields-wrap"></div>
       <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">내용</label>
-        <textarea id="si-value" placeholder="계정 / 비밀번호 / 주소 등&#10;여러 줄 입력 가능" style="width:100%;box-sizing:border-box;min-height:80px;resize:vertical;font-family:inherit;line-height:1.5;">${escapeHtml(item?.value || '')}</textarea>
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">비고 <span style="font-weight:400;opacity:.5;">(선택)</span></label>
-        <input id="si-note" value="${escapeHtml(item?.note || '')}" placeholder="메모" style="width:100%;box-sizing:border-box;" />
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">설명 <span style="font-weight:400;opacity:.5;">(선택)</span></label>
+        <input id="si-note" value="${escapeHtml(item?.note || '')}" placeholder="추가 설명" style="width:100%;box-sizing:border-box;" />
       </div>
     </div>
     <div class="modal-actions" style="margin-top:18px;">
@@ -3490,13 +3624,53 @@ function openSharedInfoModal(item = null) {
       <button class="btn" id="si-save">저장</button>
     </div>
   `);
+
+  function renderFields(cat) {
+    const wrap = $('#si-fields-wrap');
+    if (cat === '계정정보') {
+      wrap.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">ID</label>
+            <input id="si-id" value="${escapeHtml(acc.id)}" placeholder="아이디" style="width:100%;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">PW</label>
+            <input id="si-pw" value="${escapeHtml(acc.pw)}" placeholder="비밀번호" style="width:100%;box-sizing:border-box;" />
+          </div>
+        </div>
+      `;
+    } else {
+      const initialValue = labelLockedToAccount ? '' : (item?.value || '');
+      wrap.innerHTML = `
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">내용</label>
+        <textarea id="si-value" placeholder="내용 입력 (여러 줄 가능)" style="width:100%;box-sizing:border-box;min-height:80px;resize:vertical;font-family:inherit;line-height:1.5;">${escapeHtml(initialValue)}</textarea>
+      `;
+    }
+  }
+
+  renderFields(initCat);
+  $('#si-category').addEventListener('change', (e) => renderFields(e.target.value));
+
   $('[data-close]').addEventListener('click', closeModal);
   $('#si-save').addEventListener('click', async () => {
-    const cat = item?.category || '기타';
+    const cat = $('#si-category').value;
     const label = $('#si-label').value.trim();
-    const value = $('#si-value').value.trim();
     const note = $('#si-note').value.trim();
-    if (!label || !value) { toast('항목명과 내용을 입력하세요', 'error'); return; }
+    let value = '';
+    if (cat === '계정정보') {
+      const id = ($('#si-id')?.value || '').trim();
+      const pw = ($('#si-pw')?.value || '').trim();
+      if (!id && !pw) { toast('ID 또는 PW를 입력하세요', 'error'); return; }
+      const lines = [];
+      if (id) lines.push(`ID: ${id}`);
+      if (pw) lines.push(`PW: ${pw}`);
+      value = lines.join('\n');
+    } else {
+      value = ($('#si-value')?.value || '').trim();
+      if (!value) { toast('내용을 입력하세요', 'error'); return; }
+    }
+    if (!label) { toast('항목명을 입력하세요', 'error'); return; }
     if (isEdit) {
       await supabase.from('wpmt_shared_info').update({ category: cat, label, value, note, updated_at: new Date().toISOString() }).eq('id', item.id);
     } else {
