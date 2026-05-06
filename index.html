@@ -1208,6 +1208,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const DEFAULT_CATEGORIES = ['이미지 프롬프트', '콘텐츠 아이디어', '관련 서비스', '굿즈', 'AI ETC', '느좋 채널'];
+function normCat(s) { return (s == null ? '' : String(s)).normalize('NFC').trim(); }
+function catEq(a, b) { return normCat(a) === normCat(b); }
 function getCategories() {
   if (Array.isArray(refCategories) && refCategories.length) return refCategories;
   // 시드 fallback (Storage.pull 전에 호출되는 경우 등)
@@ -1406,12 +1408,31 @@ const Storage = {
       bookmarks = Array.isArray(data.bookmarks) ? data.bookmarks : [];
       refCategories = Array.isArray(data.categories) ? data.categories : [];
       driveFolderId = data.drive_folder_id || null;
-      // 카테고리 비어있으면 시드 (기본값 + 기존 북마크 카테고리)
-      if (refCategories.length === 0) {
-        const fromBookmarks = [...new Set(bookmarks.map(b => b.category).filter(Boolean))];
-        refCategories = [...new Set([...DEFAULT_CATEGORIES, ...fromBookmarks])];
-        Storage.scheduleSave();
+      // 1) NFC 정규화 마이그레이션 — 한 번 정리해서 다시 push
+      let dirty = false;
+      bookmarks.forEach(b => {
+        if (b && b.category) {
+          const n = normCat(b.category);
+          if (n !== b.category) { b.category = n; dirty = true; }
+        }
+      });
+      const normalized = refCategories.map(normCat);
+      const dedup = [];
+      normalized.forEach(c => { if (c && !dedup.some(x => catEq(x, c))) dedup.push(c); });
+      if (dedup.length !== refCategories.length || dedup.some((c, i) => c !== refCategories[i])) {
+        refCategories = dedup; dirty = true;
       }
+      // 2) 비어있으면 시드
+      if (refCategories.length === 0) {
+        const fromBookmarks = [];
+        bookmarks.forEach(b => { const c = normCat(b.category); if (c && !fromBookmarks.some(x => catEq(x, c))) fromBookmarks.push(c); });
+        refCategories = [];
+        [...DEFAULT_CATEGORIES, ...fromBookmarks].forEach(c => {
+          const n = normCat(c); if (n && !refCategories.some(x => catEq(x, n))) refCategories.push(n);
+        });
+        dirty = true;
+      }
+      if (dirty) Storage.scheduleSave();
       setSync('synced');
       return true;
     }
@@ -1717,9 +1738,10 @@ async function addBookmark() {
   const url = normalizeUrl(raw);
   // 활성 카테고리 칩이 있으면 그걸 우선, 아니면 select 값
   const cats = getCategories();
-  const cat = (activeCategory !== 'all' && cats.includes(activeCategory))
+  const rawCat = (activeCategory !== 'all' && cats.some(c => catEq(c, activeCategory)))
     ? activeCategory
     : ($('#categorySelect').value || cats[0] || '기타');
+  const cat = normCat(rawCat);
   const handle = extractHandle(url);
   const host = hostOf(url);
 
@@ -1905,8 +1927,8 @@ function renderCategories() {
   const cats = getCategories();
   let html = `<button class="cat-chip ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">전체 <span class="n">${total}</span></button>`;
   for (const c of cats) {
-    const n = bookmarks.filter(b => b.category === c).length;
-    html += `<button class="cat-chip ${activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}" draggable="true">
+    const n = bookmarks.filter(b => catEq(b.category, c)).length;
+    html += `<button class="cat-chip ${catEq(activeCategory, c) ? 'active' : ''}" data-cat="${escapeHtml(c)}" draggable="true">
       <span class="cat-name">${escapeHtml(c)}</span>
       <span class="n">${n}</span>
       <span class="cat-edit" data-cat-edit="${escapeHtml(c)}" title="이름 수정">✏️</span>
@@ -1973,10 +1995,10 @@ function renderCategories() {
 let dragSrcCat = null;
 function reorderCategory(srcName, targetName) {
   const cats = [...refCategories];
-  const srcIdx = cats.indexOf(srcName);
+  const srcIdx = cats.findIndex(c => catEq(c, srcName));
   if (srcIdx < 0) return;
   cats.splice(srcIdx, 1);
-  const newTargetIdx = cats.indexOf(targetName);
+  const newTargetIdx = cats.findIndex(c => catEq(c, targetName));
   if (newTargetIdx < 0) return;
   cats.splice(newTargetIdx, 0, srcName);
   saveCategories(cats);
@@ -1993,10 +2015,10 @@ function refreshCategorySelect() {
 }
 
 function addCategoryPrompt() {
-  const name = (prompt('새 카테고리 이름:') || '').trim();
+  const name = normCat(prompt('새 카테고리 이름:') || '');
   if (!name) return;
   const cats = getCategories();
-  if (cats.includes(name)) { toast('이미 있는 카테고리예요', 'error'); return; }
+  if (cats.some(c => catEq(c, name))) { toast('이미 있는 카테고리예요', 'error'); return; }
   cats.push(name);
   saveCategories(cats);
   renderCategories();
@@ -2004,18 +2026,17 @@ function addCategoryPrompt() {
 }
 
 function renameCategoryPrompt(oldName) {
-  const newName = (prompt('카테고리 새 이름:', oldName) || '').trim();
-  if (!newName || newName === oldName) return;
+  const newName = normCat(prompt('카테고리 새 이름:', oldName) || '');
+  if (!newName || catEq(newName, oldName)) return;
   const cats = getCategories();
-  if (cats.includes(newName)) { toast('이미 있는 이름이에요', 'error'); return; }
-  const idx = cats.indexOf(oldName);
+  if (cats.some(c => catEq(c, newName))) { toast('이미 있는 이름이에요', 'error'); return; }
+  const idx = cats.findIndex(c => catEq(c, oldName));
   if (idx < 0) return;
   cats[idx] = newName;
   saveCategories(cats);
-  // 해당 카테고리 북마크들 재태깅
   let changed = 0;
-  bookmarks.forEach(b => { if (b.category === oldName) { b.category = newName; changed++; } });
-  if (activeCategory === oldName) activeCategory = newName;
+  bookmarks.forEach(b => { if (catEq(b.category, oldName)) { b.category = newName; changed++; } });
+  if (catEq(activeCategory, oldName)) activeCategory = newName;
   if (changed) Storage.scheduleSave();
   renderCategories();
   renderBookmarks();
@@ -2024,20 +2045,20 @@ function renameCategoryPrompt(oldName) {
 
 function deleteCategoryPrompt(name) {
   const cats = getCategories();
-  const count = bookmarks.filter(b => b.category === name).length;
-  const fallback = cats.find(c => c !== name) || '기타';
+  const count = bookmarks.filter(b => catEq(b.category, name)).length;
+  const fallback = cats.find(c => !catEq(c, name)) || '기타';
   const msg = count > 0
     ? `'${name}' 카테고리를 삭제할까요?\n속한 북마크 ${count}개는 '${fallback}'(으)로 이동돼요.`
     : `'${name}' 카테고리를 삭제할까요?`;
   if (!confirm(msg)) return;
-  const next = cats.filter(c => c !== name);
+  const next = cats.filter(c => !catEq(c, name));
   if (next.length === 0) { toast('최소 1개는 남겨두세요', 'error'); return; }
   saveCategories(next);
   if (count > 0) {
-    bookmarks.forEach(b => { if (b.category === name) b.category = fallback; });
+    bookmarks.forEach(b => { if (catEq(b.category, name)) b.category = fallback; });
     Storage.scheduleSave();
   }
-  if (activeCategory === name) activeCategory = 'all';
+  if (catEq(activeCategory, name)) activeCategory = 'all';
   renderCategories();
   renderBookmarks();
   toast('삭제됨 ✓', 'success');
@@ -2049,7 +2070,7 @@ function deleteCategoryPrompt(name) {
 function renderBookmarks() {
   const grid = $('#bookmarkGrid');
   let list = bookmarks.slice();
-  if (activeCategory !== 'all') list = list.filter(b => b.category === activeCategory);
+  if (activeCategory !== 'all') list = list.filter(b => catEq(b.category, activeCategory));
   if (list.length === 0) {
     grid.innerHTML = `<div class="empty">📭 아직 북마크가 없어요</div>`;
     return;
