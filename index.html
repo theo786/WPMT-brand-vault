@@ -805,7 +805,7 @@
   .si-mode-btn.active {
     background:var(--accent); color:#181014; border-color:var(--accent);
   }
-  .si-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
+  .si-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:10px; }
   .si-item {
     background:var(--panel-2); border:1px solid var(--border); border-radius:12px;
     padding:14px 16px; display:flex; flex-direction:column; gap:5px;
@@ -2107,7 +2107,7 @@ function renderCard(b) {
         ${igYt === 'ig' ? `<button class="ig" data-act="ig">🎞 IG 다운로드</button>` : ''}
         ${igYt === 'yt' ? `<button class="yt" data-act="yt">🎬 YT 다운로드</button>` : ''}
         <select data-act="movecat" title="카테고리 변경">
-          ${CATEGORIES.map(c => `<option value="${escapeHtml(c)}" ${c === b.category ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+          ${getCategories().map(c => `<option value="${escapeHtml(c)}" ${catEq(c, b.category) ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
         </select>
         <button class="del" data-act="del" title="삭제">🗑</button>
       </div>
