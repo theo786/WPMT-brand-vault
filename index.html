@@ -681,6 +681,69 @@
     background: rgba(0,0,0,0.5); border-radius: 50%; width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;
   }
+  .file-card.file-dragging { opacity: 0.4; }
+
+  /* ===== Breadcrumb / 폴더 ===== */
+  .folder-bar {
+    display: flex; align-items: center; gap: 12px;
+    margin: 12px 0; padding: 10px 14px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .breadcrumb {
+    flex: 1; display: flex; align-items: center; gap: 6px;
+    font-size: 13px; flex-wrap: wrap;
+  }
+  .bc-item {
+    color: var(--muted); cursor: pointer;
+    padding: 3px 8px; border-radius: 6px;
+    transition: all 0.12s;
+  }
+  .bc-item:hover { color: var(--accent); background: var(--panel-3); }
+  .bc-item.current { color: var(--text); cursor: default; font-weight: 700; }
+  .bc-item.current:hover { background: transparent; color: var(--text); }
+  .bc-sep { color: var(--muted); opacity: 0.5; user-select: none; }
+
+  .folder-card {
+    aspect-ratio: 1; position: relative;
+    border-radius: 10px; overflow: hidden; cursor: pointer;
+    background: linear-gradient(135deg, rgba(255,184,107,0.12), var(--panel-2));
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+  }
+  .folder-card:hover { border-color: var(--accent-2); transform: translateY(-2px); }
+  .folder-card.folder-drop-over {
+    border-color: var(--accent-2); background: rgba(255,184,107,0.25);
+    transform: scale(1.04);
+  }
+  .folder-card .thumb { width: 100%; height: 100%; }
+  .folder-card .thumb .ico {
+    font-size: 64px; display: flex; align-items: center; justify-content: center;
+    height: 100%; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  }
+  .folder-card .badge {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(255,184,107,0.85); color: #181014;
+    padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  }
+  .folder-card .name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 6px 8px; font-size: 12px; font-weight: 600; line-height: 1.3;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .folder-actions {
+    position: absolute; top: 6px; left: 6px;
+    display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s;
+  }
+  .folder-card:hover .folder-actions { opacity: 1; }
+  .folder-act {
+    background: rgba(0,0,0,0.6); border: none;
+    color: #fff; width: 26px; height: 26px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .folder-act:hover { background: rgba(0,0,0,0.85); }
+  .folder-act.del:hover { background: var(--danger); }
 
   /* ===== 회의록 ===== */
   .minute-list { display: flex; flex-direction: column; gap: 12px; }
@@ -1070,14 +1133,20 @@
       <div class="drop" id="dropZone" style="margin-bottom:14px;">
         <div class="ico">⬆️</div>
         <div class="label">드래그하거나 클릭하여 업로드</div>
-        <div class="sublabel">이미지·영상 파일 → Google Drive 자동 저장</div>
-        <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" />
+        <div class="sublabel">이미지·영상·디자인(PSD/AI 등) — 모든 파일 → Google Drive 자동 저장</div>
+        <input type="file" id="fileInput" multiple style="display:none" />
       </div>
       <div class="upload-progress" id="uploadProgress"></div>
+      <div class="folder-bar">
+        <div class="breadcrumb" id="folderBreadcrumb"></div>
+        <button class="icon-btn" id="newFolderBtn">+ 새 폴더</button>
+      </div>
       <div class="cats-row" style="margin-top:10px;">
         <button class="cat-chip active" data-ft="all">전체 <span class="n" id="fct-all">0</span></button>
         <button class="cat-chip" data-ft="image">이미지 <span class="n" id="fct-image">0</span></button>
         <button class="cat-chip" data-ft="video">영상 <span class="n" id="fct-video">0</span></button>
+        <button class="cat-chip" data-ft="design">디자인 <span class="n" id="fct-design">0</span></button>
+        <button class="cat-chip" data-ft="other">기타 <span class="n" id="fct-other">0</span></button>
       </div>
       <div class="file-grid" id="fileGrid"></div>
     </section>
@@ -1268,7 +1337,10 @@ const FORMAT_CLASS = { '릴스': 'reels', '피드': 'feed', '스토리': 'story'
 const STATUS_LABEL = { todo: '할 일', doing: '진행 중', done: '완료' };
 const CONTENT_STATUS_LABEL = { planning: '기획', making: '제작중', done: '완료', posted: '업로드완료' };
 
-let driveFiles = []; // 로컬 API 파일 목록
+let driveFiles = []; // 현재 폴더의 파일들
+let driveFolders = []; // 현재 폴더의 하위 폴더들
+let currentFolderId = null; // null = 루트 (WPMT-Brand-Vault)
+let folderPath = []; // breadcrumb: [{ id, name }] — 루트는 빈 배열
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -1658,7 +1730,8 @@ async function getDriveFolderId() {
 }
 
 async function uploadFileToDrive(file, onProgress) {
-  const folderId = await getDriveFolderId();
+  // 현재 보고 있는 폴더에 업로드 (currentFolderId가 null이면 루트)
+  const folderId = currentFolderId || await getDriveFolderId();
   const token = await ensureDriveToken(false);
   const meta = { name: file.name, parents: [folderId] };
   const form = new FormData();
@@ -1678,19 +1751,65 @@ async function uploadFileToDrive(file, onProgress) {
   });
 }
 
-async function listDriveFiles() {
-  const folderId = await getDriveFolderId();
-  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const r = await driveRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,createdTime,thumbnailLink,webViewLink)&orderBy=createdTime%20desc&pageSize=100`);
+// 특정 폴더 안의 파일 + 하위 폴더를 모두 가져옴
+async function listDriveFolderContents(folderId) {
+  const targetId = folderId || await getDriveFolderId();
+  const q = encodeURIComponent(`'${targetId}' in parents and trashed=false`);
+  const r = await driveRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,createdTime,modifiedTime,thumbnailLink,webViewLink,parents)&orderBy=name&pageSize=200`);
   const { files } = await r.json();
-  driveFiles = files || [];
+  const all = files || [];
+  const folders = all.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+  const items = all.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+  return { folders, items };
+}
+
+// 호환용 — 기존 listDriveFiles 호출처 유지
+async function listDriveFiles() {
+  const targetId = currentFolderId || await getDriveFolderId();
+  const { folders, items } = await listDriveFolderContents(targetId);
+  driveFolders = folders;
+  driveFiles = items;
   return driveFiles;
+}
+
+async function createDriveSubfolder(parentId, name) {
+  const r = await driveRequest('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentId],
+    }),
+  });
+  return r.json();
+}
+
+async function renameDriveItem(itemId, newName) {
+  const r = await driveRequest(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName }),
+  });
+  return r.json();
+}
+
+// 파일/폴더의 부모를 변경 (이동)
+async function moveDriveItem(itemId, newParentId) {
+  // 기존 parents 가져오기
+  const meta = await driveRequest(`https://www.googleapis.com/drive/v3/files/${itemId}?fields=parents`);
+  const { parents } = await meta.json();
+  const removeParents = (parents || []).join(',');
+  const url = `https://www.googleapis.com/drive/v3/files/${itemId}?addParents=${newParentId}&removeParents=${removeParents}&fields=id,parents`;
+  const r = await driveRequest(url, { method: 'PATCH' });
+  return r.json();
 }
 
 async function deleteDriveFile(fileId) {
   await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE' });
   mediaCache.delete(fileId);
   driveFiles = driveFiles.filter(f => f.id !== fileId);
+  driveFolders = driveFolders.filter(f => f.id !== fileId);
 }
 
 async function fetchDriveMediaUrl(fileId) {
@@ -1741,6 +1860,21 @@ $('#driveStatus').addEventListener('click', async () => {
 $('#refreshFilesBtn').addEventListener('click', () => {
   refreshDriveFiles();
   toast('새로고침', 'success');
+});
+
+$('#newFolderBtn').addEventListener('click', async () => {
+  if (!driveConnected) { toast('Drive 연결 필요', 'error'); return; }
+  const name = (prompt('새 폴더 이름:') || '').trim();
+  if (!name) return;
+  try {
+    const parentId = currentFolderId || await getDriveFolderId();
+    await createDriveSubfolder(parentId, name);
+    await refreshDriveFiles();
+    toast('폴더 생성됨 ✓', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('폴더 생성 실패', 'error');
+  }
 });
 
 /* ============================================================
@@ -2172,72 +2306,269 @@ function renderRecent() {
 /* ============================================================
  * 렌더 — 파일 그리드
  * ============================================================ */
+// 파일 종류 판별 — 확장자 + mimeType 둘 다 보고 결정
+function fileKind(f) {
+  const m = (f.mimeType || '').toLowerCase();
+  const ext = (f.name || '').toLowerCase().split('.').pop();
+  // 디자인 파일은 image/* 인 경우도 있어서 먼저 체크
+  if (['psd','ai','sketch','fig','xd','indd','aep','prproj'].includes(ext)
+      || m.includes('photoshop') || m.includes('illustrator') || m.includes('postscript')) {
+    return 'design';
+  }
+  if (m.startsWith('image/')) return 'image';
+  if (m.startsWith('video/')) return 'video';
+  if (m.startsWith('audio/')) return 'audio';
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return 'archive';
+  if (ext === 'pdf' || m.includes('pdf')) return 'pdf';
+  return 'other';
+}
+
+function fileIcon(kind, ext) {
+  if (kind === 'image') return '🖼';
+  if (kind === 'video') return '🎬';
+  if (kind === 'design') {
+    if (ext === 'psd') return '🖌';
+    if (ext === 'ai') return '🎨';
+    if (ext === 'fig' || ext === 'sketch' || ext === 'xd') return '✏️';
+    return '🎨';
+  }
+  if (kind === 'audio') return '🎵';
+  if (kind === 'archive') return '📦';
+  if (kind === 'pdf') return '📕';
+  return '📄';
+}
+
+function fileBadge(kind, ext) {
+  if (kind === 'image') return 'IMG';
+  if (kind === 'video') return 'VID';
+  if (kind === 'design') return (ext || 'DSGN').toUpperCase().slice(0, 5);
+  if (kind === 'audio') return 'AUD';
+  if (kind === 'archive') return 'ZIP';
+  if (kind === 'pdf') return 'PDF';
+  return (ext || 'FILE').toUpperCase().slice(0, 5);
+}
+
 function updateFileCounts() {
   const all = driveFiles.length;
-  const img = driveFiles.filter(f => /^image\//.test(f.mimeType)).length;
-  const vid = driveFiles.filter(f => /^video\//.test(f.mimeType)).length;
+  let img = 0, vid = 0, dsgn = 0, other = 0;
+  for (const f of driveFiles) {
+    const k = fileKind(f);
+    if (k === 'image') img++;
+    else if (k === 'video') vid++;
+    else if (k === 'design') dsgn++;
+    else other++;
+  }
   $('#fct-all').textContent = all;
   $('#fct-image').textContent = img;
   $('#fct-video').textContent = vid;
+  if ($('#fct-design')) $('#fct-design').textContent = dsgn;
+  if ($('#fct-other')) $('#fct-other').textContent = other;
   const fc = $('#fileCount'); if (fc) fc.textContent = `(${all})`;
 }
 
-function renderFileGrid() {
-  const grid = $('#fileGrid');
-  let list = driveFiles.slice();
-  if (activeFileFilter === 'image') list = list.filter(f => /^image\//.test(f.mimeType));
-  else if (activeFileFilter === 'video') list = list.filter(f => /^video\//.test(f.mimeType));
-  if (list.length === 0) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">📭 ${isDriveConnected() ? '파일 없음' : 'Drive 먼저 연결'}</div>`;
+function renderBreadcrumb() {
+  const el = $('#folderBreadcrumb');
+  if (!el) return;
+  const crumbs = [{ id: null, name: '🏠 루트' }, ...folderPath];
+  el.innerHTML = crumbs.map((c, i) => {
+    const isLast = i === crumbs.length - 1;
+    return `<span class="bc-item ${isLast ? 'current' : ''}" data-fid="${c.id ?? ''}">${escapeHtml(c.name)}</span>${isLast ? '' : '<span class="bc-sep">›</span>'}`;
+  }).join('');
+  el.querySelectorAll('.bc-item').forEach(item => {
+    if (item.classList.contains('current')) return;
+    item.addEventListener('click', () => {
+      const fid = item.dataset.fid || null;
+      navigateToFolder(fid);
+    });
+  });
+}
+
+async function navigateToFolder(folderId) {
+  if (!driveConnected) {
+    toast('Drive 연결 필요', 'error');
     return;
   }
-  grid.innerHTML = list.map(renderFileCard).join('');
+  if (!folderId) {
+    currentFolderId = null;
+    folderPath = [];
+  } else {
+    // 이미 path에 있으면 그 위치까지로 자르기, 아니면 push
+    const idx = folderPath.findIndex(p => p.id === folderId);
+    if (idx >= 0) {
+      folderPath = folderPath.slice(0, idx + 1);
+    } else {
+      // 새 진입 — 폴더 이름은 driveFolders에서
+      const folder = driveFolders.find(f => f.id === folderId);
+      if (folder) folderPath = [...folderPath, { id: folder.id, name: folder.name }];
+    }
+    currentFolderId = folderId;
+  }
+  await refreshDriveFiles();
+}
+
+function renderFolderCard(f) {
+  return `
+    <div class="folder-card" data-folder-id="${f.id}" data-folder-name="${escapeHtml(f.name)}">
+      <div class="thumb"><div class="ico">📁</div></div>
+      <div class="badge">FOLDER</div>
+      <div class="folder-actions">
+        <button class="folder-act" data-act="rename" data-id="${f.id}" title="이름 변경">✏️</button>
+        <button class="folder-act del" data-act="delete" data-id="${f.id}" title="삭제">🗑</button>
+      </div>
+      <div class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+    </div>
+  `;
+}
+
+function renderFileGrid() {
+  renderBreadcrumb();
+  const grid = $('#fileGrid');
+
+  // 파일 필터링 (폴더는 항상 표시)
+  let fileList = driveFiles.slice();
+  if (activeFileFilter !== 'all') {
+    if (activeFileFilter === 'other') {
+      fileList = fileList.filter(f => !['image','video','design'].includes(fileKind(f)));
+    } else {
+      fileList = fileList.filter(f => fileKind(f) === activeFileFilter);
+    }
+  }
+
+  // 폴더는 'all' 필터일 때만 보임 (다른 필터에선 파일 종류만 봐야)
+  const showFolders = activeFileFilter === 'all';
+  const folderList = showFolders ? driveFolders : [];
+
+  if (fileList.length === 0 && folderList.length === 0) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">📭 ${isDriveConnected() ? '비어있음 — 업로드하거나 폴더 만들기' : 'Drive 먼저 연결'}</div>`;
+    return;
+  }
+
+  grid.innerHTML = folderList.map(renderFolderCard).join('') + fileList.map(renderFileCard).join('');
+
+  // 폴더 카드 이벤트
+  grid.querySelectorAll('.folder-card').forEach(card => {
+    const id = card.dataset.folderId;
+    card.addEventListener('click', e => {
+      if (e.target.closest('.folder-act')) return; // 액션 버튼은 따로 처리
+      navigateToFolder(id);
+    });
+    // 드롭 타겟 — 파일 카드를 여기에 떨어뜨리면 이동
+    card.addEventListener('dragover', e => {
+      if (e.dataTransfer?.types?.includes('application/x-drive-file-id')) {
+        e.preventDefault();
+        card.classList.add('folder-drop-over');
+      }
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('folder-drop-over'));
+    card.addEventListener('drop', async e => {
+      card.classList.remove('folder-drop-over');
+      const fid = e.dataTransfer.getData('application/x-drive-file-id');
+      if (!fid || fid === id) return;
+      e.preventDefault();
+      try {
+        toast('이동 중…', 'info');
+        await moveDriveItem(fid, id);
+        toast('이동됨 ✓', 'success');
+        await refreshDriveFiles();
+      } catch (err) {
+        console.error(err);
+        toast('이동 실패', 'error');
+      }
+    });
+  });
+  grid.querySelectorAll('.folder-act').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const f = driveFolders.find(x => x.id === id);
+      if (!f) return;
+      if (btn.dataset.act === 'rename') {
+        const newName = (prompt('폴더 새 이름:', f.name) || '').trim();
+        if (!newName || newName === f.name) return;
+        try {
+          await renameDriveItem(id, newName);
+          // path에 있으면 갱신
+          folderPath = folderPath.map(p => p.id === id ? { ...p, name: newName } : p);
+          await refreshDriveFiles();
+          toast('이름 변경됨 ✓', 'success');
+        } catch (err) { console.error(err); toast('변경 실패', 'error'); }
+      } else if (btn.dataset.act === 'delete') {
+        if (!confirm(`'${f.name}' 폴더를 삭제할까요?\n안에 있는 모든 파일도 함께 삭제됩니다.`)) return;
+        try {
+          await deleteDriveFile(id);
+          await refreshDriveFiles();
+          toast('삭제됨 ✓', 'success');
+        } catch (err) { console.error(err); toast('삭제 실패', 'error'); }
+      }
+    });
+  });
+
+  // 파일 카드 이벤트 + 드래그 소스
   grid.querySelectorAll('.file-card').forEach(card => {
     const id = card.dataset.id;
     const f = driveFiles.find(x => x.id === id);
     if (!f) return;
+    card.draggable = true;
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('application/x-drive-file-id', id);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('file-dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('file-dragging'));
     card.addEventListener('click', () => openFilePreview(f));
   });
   // 썸네일 로딩
-  list.forEach(f => {
-    const img = grid.querySelector(`.file-card[data-id="${f.id}"] .thumb img`);
+  fileList.forEach(f => {
+    const card = grid.querySelector(`.file-card[data-id="${f.id}"]`);
+    if (!card) return;
+    const img = card.querySelector('.thumb img');
     if (!img) return;
     if (f.thumbnailLink) {
       img.src = f.thumbnailLink;
       img.onerror = () => { img.style.display = 'none'; };
-    } else {
+    } else if (fileKind(f) === 'image' || fileKind(f) === 'video') {
       fetchDriveMediaUrl(f.id).then(url => { img.src = url; }).catch(() => { img.style.display = 'none'; });
+    } else {
+      img.style.display = 'none';
     }
   });
 }
 
 function renderFileCard(f) {
-  const isImg = /^image\//.test(f.mimeType);
-  const isVid = /^video\//.test(f.mimeType);
-  const ico = isImg ? '🖼' : isVid ? '🎬' : '📄';
+  const ext = (f.name || '').toLowerCase().split('.').pop();
+  const kind = fileKind(f);
+  const ico = fileIcon(kind, ext);
+  const badge = fileBadge(kind, ext);
+  const isVid = kind === 'video';
+  const showImgTag = !!f.thumbnailLink || kind === 'image' || kind === 'video';
   return `
     <div class="file-card" data-id="${f.id}">
       <div class="thumb">
-        ${f.thumbnailLink ? '<img alt="" />' : `<div class="ico">${ico}</div>`}
+        ${showImgTag ? '<img alt="" />' : ''}
+        <div class="ico" ${showImgTag ? 'style="display:none"' : ''}>${ico}</div>
         ${isVid ? '<div class="video-mark">▶</div>' : ''}
       </div>
-      <div class="badge">${isImg ? 'IMG' : isVid ? 'VID' : 'FILE'}</div>
+      <div class="badge">${badge}</div>
       <div class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
     </div>
   `;
 }
 
 async function openFilePreview(f) {
+  const kind = fileKind(f);
+  const ext = (f.name || '').toLowerCase().split('.').pop();
+  const previewable = kind === 'image' || kind === 'video';
   openWideModal(`
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <div style="font-weight:700; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</div>
       <div style="display:flex; gap:6px;">
+        ${f.webViewLink ? `<a class="btn ghost" href="${escapeHtml(f.webViewLink)}" target="_blank" rel="noopener">↗ Drive에서 열기</a>` : ''}
         <button class="btn ghost" id="dlBtn">⬇ 다운로드</button>
         <button class="btn ghost" id="delBtn" style="color:var(--danger)">🗑 삭제</button>
         <button class="btn ghost" data-close>닫기 ×</button>
       </div>
     </div>
-    <div id="previewSlot" style="text-align:center; min-height:200px;">불러오는 중…</div>
+    <div id="previewSlot" style="text-align:center; min-height:200px;">${previewable ? '불러오는 중…' : ''}</div>
   `);
   $('[data-close]').addEventListener('click', closeModal);
   $('#delBtn').addEventListener('click', async () => {
@@ -2252,20 +2583,49 @@ async function openFilePreview(f) {
       toast('삭제 실패', 'error');
     }
   });
+
   const slot = $('#previewSlot');
-  fetchDriveMediaUrl(f.id).then(mediaUrl => {
-    $('#dlBtn').addEventListener('click', () => {
+
+  // 다운로드 — 어떤 종류든 OK. blob을 받아서 a.download
+  const doDownload = async () => {
+    try {
+      const url = await fetchDriveMediaUrl(f.id);
       const a = document.createElement('a');
-      a.href = mediaUrl; a.download = f.name; a.click();
-    });
-    if (/^image\//.test(f.mimeType)) {
-      slot.innerHTML = `<img class="preview-media" src="${mediaUrl}" />`;
-    } else if (/^video\//.test(f.mimeType)) {
-      slot.innerHTML = `<video class="preview-media" src="${mediaUrl}" controls autoplay></video>`;
-    } else {
-      slot.innerHTML = `<div>미리보기 미지원 형식</div>`;
+      a.href = url; a.download = f.name; a.click();
+    } catch (e) {
+      toast('다운로드 실패', 'error');
     }
-  }).catch(() => { slot.innerHTML = `<div>미리보기 실패</div>`; });
+  };
+  $('#dlBtn').addEventListener('click', doDownload);
+
+  // 미리보기 미지원 파일은 blob fetch 자체를 안 함 (메모리 절약)
+  if (!previewable) {
+    const ico = fileIcon(kind, ext);
+    slot.innerHTML = `
+      <div style="padding:40px 20px;">
+        <div style="font-size:80px; margin-bottom:16px;">${ico}</div>
+        <div style="font-weight:600; margin-bottom:6px; word-break:break-all;">${escapeHtml(f.name)}</div>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:20px;">
+          ${kind === 'design' ? '디자인 파일' : kind === 'pdf' ? 'PDF 문서' : kind === 'archive' ? '압축 파일' : kind === 'audio' ? '오디오 파일' : '파일'} — 미리보기 미지원
+        </div>
+        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+          <button class="btn" id="bigDlBtn">⬇ 다운로드</button>
+          ${f.webViewLink ? `<a class="btn ghost" href="${escapeHtml(f.webViewLink)}" target="_blank" rel="noopener">↗ Drive에서 열기</a>` : ''}
+        </div>
+      </div>
+    `;
+    $('#bigDlBtn')?.addEventListener('click', doDownload);
+    return;
+  }
+
+  // 이미지/영상은 blob fetch 후 미리보기
+  fetchDriveMediaUrl(f.id).then(mediaUrl => {
+    if (kind === 'image') {
+      slot.innerHTML = `<img class="preview-media" src="${mediaUrl}" />`;
+    } else if (kind === 'video') {
+      slot.innerHTML = `<video class="preview-media" src="${mediaUrl}" controls autoplay></video>`;
+    }
+  }).catch(() => { slot.innerHTML = `<div>미리보기 실패 — 다운로드는 가능</div>`; });
 }
 
 /* ============================================================
