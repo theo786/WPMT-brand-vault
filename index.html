@@ -940,16 +940,22 @@
     text-decoration: line-through;
     word-break: break-word;
   }
-  .agenda-trash-restore {
+  .agenda-trash-restore, .agenda-trash-delete {
     font-size: 11px; padding: 3px 8px;
     border-radius: 5px; cursor: pointer;
-    background: var(--panel-2); color: var(--accent);
+    background: var(--panel-2);
     border: 1px solid var(--border);
     white-space: nowrap;
   }
+  .agenda-trash-restore { color: var(--accent); }
   .agenda-trash-restore:hover {
     background: var(--accent); color: #000;
     border-color: var(--accent);
+  }
+  .agenda-trash-delete { color: var(--danger); }
+  .agenda-trash-delete:hover {
+    background: var(--danger); color: #fff;
+    border-color: var(--danger);
   }
   .snote-sidebar {
     background: var(--panel);
@@ -3051,28 +3057,42 @@ async function purgeOldTrash() {
 /* ============================================================
  * 업무 보드 렌더
  * ============================================================ */
+const expandedDoneTasks = {}; // per-member expansion state
+
+function taskCardHtml(t, isDone) {
+  const d = t.data;
+  const completeOrRestoreBtn = isDone
+    ? `<button class="icon-btn" data-act="restore-task" data-id="${t.id}" title="다시 할일로" style="padding:3px 8px;font-size:11px;color:var(--accent);">↩</button>`
+    : `<button class="icon-btn" data-act="complete-task" data-id="${t.id}" title="완료 처리" style="padding:3px 8px;font-size:11px;color:var(--success,#4ade80);">✓</button>`;
+  return `
+    <div class="task-card ${isDone?'is-done':''}" data-id="${t.id}">
+      <div class="task-title" style="${isDone?'text-decoration:line-through;color:var(--muted);':''}">${d.is_agenda?'<span title="회의 어젠다" style="margin-right:4px;">💬</span>':''}${escapeHtml(d.title)}</div>
+      <div class="task-meta">
+        <span class="status-badge ${d.status}">${STATUS_LABEL[d.status] || d.status}</span>
+        ${d.due ? `<span class="task-due">📅 ${d.due}</span>` : ''}
+      </div>
+      ${d.note ? `<div class="task-note">${escapeHtml(d.note)}</div>` : ''}
+      <div class="card-actions">
+        ${completeOrRestoreBtn}
+        <button class="icon-btn" data-act="edit-task" data-id="${t.id}" style="padding:3px 8px;font-size:11px;">✏️</button>
+        <button class="icon-btn" data-act="del-task" data-id="${t.id}" style="padding:3px 8px;font-size:11px;color:var(--danger);">×</button>
+      </div>
+    </div>`;
+}
+
 function renderTasks() {
   const board = $('#taskBoard');
   if (!board) return;
   const tasks = teamItems.filter(x => x.type === 'task' && !x.data?.deleted);
   board.innerHTML = MEMBERS.map((m, mi) => {
     const myTasks = tasks.filter(t => t.data.assignee === m.name);
-    const cardsHtml = myTasks.map(t => {
-      const d = t.data;
-      return `
-        <div class="task-card" data-id="${t.id}">
-          <div class="task-title">${d.is_agenda?'<span title="회의 어젠다" style="margin-right:4px;">💬</span>':''}${escapeHtml(d.title)}</div>
-          <div class="task-meta">
-            <span class="status-badge ${d.status}">${STATUS_LABEL[d.status] || d.status}</span>
-            ${d.due ? `<span class="task-due">📅 ${d.due}</span>` : ''}
-          </div>
-          ${d.note ? `<div class="task-note">${escapeHtml(d.note)}</div>` : ''}
-          <div class="card-actions">
-            <button class="icon-btn" data-act="edit-task" data-id="${t.id}" style="padding:3px 8px;font-size:11px;">✏️</button>
-            <button class="icon-btn" data-act="del-task" data-id="${t.id}" style="padding:3px 8px;font-size:11px;color:var(--danger);">×</button>
-          </div>
-        </div>`;
-    }).join('');
+    const activeTasks = myTasks.filter(t => t.data.status !== 'done');
+    const doneTasks = myTasks.filter(t => t.data.status === 'done');
+    const isExpanded = expandedDoneTasks[m.name];
+
+    const activeHtml = activeTasks.map(t => taskCardHtml(t, false)).join('');
+    const doneHtml = doneTasks.map(t => taskCardHtml(t, true)).join('');
+
     return `
       <div class="task-col">
         <div class="task-col-header">
@@ -3080,10 +3100,19 @@ function renderTasks() {
             <span class="member-dot dot-${mi}"></span>
             <span>${escapeHtml(m.nick)}</span>
           </div>
-          <span style="font-size:11px;color:var(--muted);">${myTasks.length}개</span>
+          <span style="font-size:11px;color:var(--muted);">${activeTasks.length}개${doneTasks.length>0?` · ✓ ${doneTasks.length}`:''}</span>
         </div>
-        ${cardsHtml || '<div style="color:var(--muted);font-size:12px;padding:4px 0;">업무 없음</div>'}
+        ${activeHtml || '<div style="color:var(--muted);font-size:12px;padding:4px 0;">업무 없음</div>'}
         <button class="add-task-btn" data-act="add-task" data-member="${m.name}">+ 업무 추가</button>
+        ${doneTasks.length > 0 ? `
+          <button class="done-toggle-btn" data-act="toggle-done" data-member="${m.name}" style="margin-top:10px;width:100%;padding:6px 10px;border-radius:7px;background:var(--panel-2);border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <span>✓ 완료된 업무 (${doneTasks.length})</span>
+            <span>${isExpanded?'▲':'▼'}</span>
+          </button>
+          <div class="done-task-list" data-member="${m.name}" style="margin-top:6px;display:${isExpanded?'flex':'none'};flex-direction:column;gap:6px;">
+            ${doneHtml}
+          </div>
+        ` : ''}
       </div>`;
   }).join('');
   wireTaskEvents();
@@ -3108,6 +3137,40 @@ function wireTaskEvents() {
       renderTasks();
       if (activeTab === 'minutes') renderAgendaPanel();
       toast('삭제됨');
+    })
+  );
+  $$('[data-act="complete-task"]').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (!item) return;
+      btn.disabled = true;
+      // 자동으로 완료된 업무 섹션 펼치기
+      expandedDoneTasks[item.data.assignee] = true;
+      await updateTeamItem(item.id, { ...item.data, status: 'done' });
+      renderTasks();
+      if (activeTab === 'minutes') renderAgendaPanel();
+      toast('완료 처리됨 ✓', 'success');
+    })
+  );
+  $$('[data-act="restore-task"]').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (!item) return;
+      btn.disabled = true;
+      await updateTeamItem(item.id, { ...item.data, status: 'todo' });
+      renderTasks();
+      if (activeTab === 'minutes') renderAgendaPanel();
+      toast('할 일로 복원됨 ↩', 'success');
+    })
+  );
+  $$('[data-act="toggle-done"]').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const member = btn.dataset.member;
+      expandedDoneTasks[member] = !expandedDoneTasks[member];
+      renderTasks();
     })
   );
 }
@@ -3621,6 +3684,7 @@ function renderAgendaPanel() {
         <div class="agenda-trash-card">
           <div class="agenda-trash-title">${escapeHtml(t.data.title)}</div>
           <button class="agenda-trash-restore" data-id="${t.id}">↩ 복원</button>
+          <button class="agenda-trash-delete" data-id="${t.id}" title="영구 삭제">✕</button>
         </div>`).join('');
 
       trashEl.querySelectorAll('.agenda-trash-restore').forEach(btn => {
@@ -3633,6 +3697,17 @@ function renderAgendaPanel() {
           renderAgendaPanel();
           if (activeTab === 'tasks') renderTasks();
           toast('어젠다 복원됨 ↩', 'success');
+        });
+      });
+
+      trashEl.querySelectorAll('.agenda-trash-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('영구 삭제할까요? 복원 불가능합니다.')) return;
+          btn.disabled = true;
+          await hardDeleteTeamItem(btn.dataset.id);
+          renderAgendaPanel();
+          if (activeTab === 'tasks') renderTasks();
+          toast('영구 삭제됨');
         });
       });
     }
@@ -4226,6 +4301,9 @@ function renderAll() {
   renderFileGrid();
   updateFileCounts();
   renderContentSchedule();
+  renderTasks();
+  renderMinutes();
+  renderAgendaPanel();
 }
 
 /* ============================================================
