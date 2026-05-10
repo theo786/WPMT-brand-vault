@@ -2,3 +2,23 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+
+# macOS / iCloud
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.icloud
+*.icloud
+.Spotlight-V100
+.Trashes
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.bak
+
+# Local backups
+*.localStorage-backup

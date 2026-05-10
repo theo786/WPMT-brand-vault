@@ -1028,7 +1028,7 @@
       <button data-tab="tasks" class="active">✅ 업무</button>
       <button data-tab="schedule">📅 스케줄</button>
       <button data-tab="minutes">📋 회의록</button>
-      <button data-tab="seminotion">📝 세미 노션</button>
+      <button data-tab="seminotion" style="display:none;">📝 세미 노션</button>
       <button data-tab="reference">🎨 레퍼런스</button>
       <button data-tab="filevault">📂 파일보관함</button>
       <button data-tab="random">✨ 랜덤뽑기</button>
@@ -1084,6 +1084,13 @@
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">참석자</div>
               <div id="mn-attendees" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
             </div>
+            <div id="mn-agenda-box" style="margin-bottom:12px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;display:none;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <div style="font-size:12px;font-weight:600;">💬 회의 어젠다 <span id="mn-agenda-count" style="color:var(--muted);font-weight:400;"></span></div>
+                <div style="font-size:11px;color:var(--muted);">체크하면 완료 처리</div>
+              </div>
+              <div id="mn-agenda-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
             <div class="editor-toolbar" id="minuteToolbar">
               <button data-mcmd="h1" title="제목1 (⌘⌥1)">H1<span class="kb">⌘⌥1</span></button>
               <button data-mcmd="h2" title="제목2 (⌘⌥2)">H2<span class="kb">⌘⌥2</span></button>
@@ -1128,7 +1135,10 @@
     <section id="filevaultView" style="display:none">
       <div class="section-header" style="margin-bottom:12px;">
         <h2>📂 파일보관함</h2>
-        <button class="icon-btn" id="refreshFilesBtn">↻ 새로고침</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <a class="btn-primary" href="https://drive.google.com/drive/folders/10Wgx_RojYfYkHHC1FSMb8To8EqozWBfn?usp=drive_link" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">🔗 Google Drive 열기</a>
+          <button class="icon-btn" id="refreshFilesBtn">↻ 새로고침</button>
+        </div>
       </div>
       <div class="drop" id="dropZone" style="margin-bottom:14px;">
         <div class="ico">⬆️</div>
@@ -1617,8 +1627,9 @@ async function initApp(user) {
 /* ============================================================
  * Google Drive API (GIS 자동 연결)
  * ============================================================ */
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const DRIVE_FOLDER_NAME = 'WPMT-Brand-Vault';
+const DRIVE_ROOT_FOLDER_ID = '10Wgx_RojYfYkHHC1FSMb8To8EqozWBfn';
 
 let driveToken = null;   // { access_token, expires_at }
 let driveConnected = false;
@@ -1714,18 +1725,8 @@ async function driveRequest(url, options = {}) {
 }
 
 async function getDriveFolderId() {
-  if (driveFolderId) return driveFolderId;
-  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r = await driveRequest(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
-  const { files } = await r.json();
-  if (files?.length) { driveFolderId = files[0].id; return driveFolderId; }
-  const cr = await driveRequest('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }),
-  });
-  const folder = await cr.json();
-  driveFolderId = folder.id;
+  // 고정 폴더 ID 사용 (drive 풀 스코프 + 하드코딩된 폴더로 양방향 동기화)
+  driveFolderId = DRIVE_ROOT_FOLDER_ID;
   return driveFolderId;
 }
 
@@ -2920,7 +2921,7 @@ function renderTasks() {
       const d = t.data;
       return `
         <div class="task-card" data-id="${t.id}">
-          <div class="task-title">${escapeHtml(d.title)}</div>
+          <div class="task-title">${d.is_agenda?'<span title="회의 어젠다" style="margin-right:4px;">💬</span>':''}${escapeHtml(d.title)}</div>
           <div class="task-meta">
             <span class="status-badge ${d.status}">${STATUS_LABEL[d.status] || d.status}</span>
             ${d.due ? `<span class="task-due">📅 ${d.due}</span>` : ''}
@@ -3006,6 +3007,11 @@ function openTaskModal(item, defaultMember) {
       <input type="date" id="t-due" value="${d.due||''}" style="${d.due?'':'display:none'}" />
     </div>
     <div class="input-row">
+      <label>분류</label>
+      <button type="button" class="due-tab ${d.is_agenda?'active':''}" id="t-agenda-btn" style="width:auto;padding:8px 14px;">💬 회의 어젠다</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">선택 시 회의록 상단에 자동으로 표시됩니다</div>
+    </div>
+    <div class="input-row">
       <label>메모 (선택)</label>
       <textarea id="t-note" placeholder="추가 내용...">${escapeHtml(d.note||'')}</textarea>
     </div>
@@ -3015,6 +3021,12 @@ function openTaskModal(item, defaultMember) {
     </div>
   `);
   $('[data-close]').addEventListener('click', closeModal);
+
+  let isAgenda = !!d.is_agenda;
+  $('#t-agenda-btn').addEventListener('click', () => {
+    isAgenda = !isAgenda;
+    $('#t-agenda-btn').classList.toggle('active', isAgenda);
+  });
 
   const today = fmtDate(new Date());
   $$('#modal .due-tab').forEach(btn => {
@@ -3043,7 +3055,8 @@ function openTaskModal(item, defaultMember) {
       title, assignee: $('#t-assignee').value,
       status: $('#t-status').value,
       due: $('#t-due').value || null,
-      note: $('#t-note').value.trim()
+      note: $('#t-note').value.trim(),
+      is_agenda: isAgenda,
     };
     $('#t-save').disabled = true;
     if (isEdit) await updateTeamItem(item.id, itemData);
@@ -3074,6 +3087,36 @@ function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// 반복 일정이 특정 날짜에 발생하는지 판정
+function occursOn(item, dateStr) {
+  const d = item.data;
+  if (!d.date) return false;
+  if (dateStr < d.date) return false;
+  if (d.repeat_until && dateStr > d.repeat_until) return false;
+  const repeat = d.repeat || 'none';
+  if (repeat === 'none') return d.date === dateStr;
+
+  const start = new Date(d.date + 'T00:00:00');
+  const target = new Date(dateStr + 'T00:00:00');
+
+  switch (repeat) {
+    case 'daily':
+      return true;
+    case 'weekly': {
+      const diffDays = Math.round((target - start) / 86400000);
+      return diffDays % 7 === 0;
+    }
+    case 'monthly':
+      return start.getDate() === target.getDate();
+    case 'yearly':
+      return start.getMonth() === target.getMonth() && start.getDate() === target.getDate();
+    default:
+      return false;
+  }
+}
+
+const REPEAT_LABEL = { none:'', daily:'🔁 매일', weekly:'🔁 매주', monthly:'🔁 매월', yearly:'🔁 매년' };
+
 const CAT_FORMAT_CLASS = { '콘텐츠': FORMAT_CLASS, '운영': {}, '굿즈': {} };
 const CAT_COLORS = { '콘텐츠': 'accent-2', '운영': 'ops', '굿즈': 'goods' };
 
@@ -3088,10 +3131,11 @@ function scheduleCardHtml(item) {
   else if (isOps) { fmtLabel = '운영'; fmtCls = 'ops'; }
   else { fmtLabel = '굿즈'; fmtCls = 'goods'; }
   const statusKey = cd.status || 'planning';
+  const repeatBadge = (cd.repeat && cd.repeat !== 'none') ? `<span class="c-repeat" title="${REPEAT_LABEL[cd.repeat]||''}">🔁</span>` : '';
   return `
     <div class="content-card" data-id="${item.id}">
       <span class="c-format ${fmtCls}">${escapeHtml(fmtLabel)}</span>
-      <div class="c-topic">${escapeHtml(cd.topic)}</div>
+      <div class="c-topic">${repeatBadge}${escapeHtml(cd.topic)}</div>
       <div class="c-bottom">
         <span class="c-assignee ${mi>=0?'m-'+mi:''}">${escapeHtml(mi>=0?MEMBERS[mi].nick:(cd.assignee||''))}</span>
         <span class="c-status ${statusKey}">${CONTENT_STATUS_LABEL[statusKey]||statusKey}</span>
@@ -3126,7 +3170,7 @@ function renderContentSchedule() {
   const tasks = teamItems.filter(x => x.type === 'task' && x.data.due);
   grid.innerHTML = dates.map((d, di) => {
     const dateStr = fmtDate(d);
-    const dayContents = contents.filter(c => c.data.date === dateStr);
+    const dayContents = contents.filter(c => occursOn(c, dateStr));
     const dayTasks   = tasks.filter(t => t.data.due === dateStr);
     const cards = [
       ...dayContents.map(c => scheduleCardHtml(c)),
@@ -3211,6 +3255,20 @@ function openContentModal(item, defaultDate) {
       </select>
     </div>
     <div class="input-row">
+      <label>반복</label>
+      <select id="c-repeat">
+        <option value="none"    ${(d.repeat||'none')==='none'?'selected':''}>없음</option>
+        <option value="daily"   ${d.repeat==='daily'?'selected':''}>매일</option>
+        <option value="weekly"  ${d.repeat==='weekly'?'selected':''}>매주</option>
+        <option value="monthly" ${d.repeat==='monthly'?'selected':''}>매월</option>
+        <option value="yearly"  ${d.repeat==='yearly'?'selected':''}>매년</option>
+      </select>
+    </div>
+    <div class="input-row" id="c-repeat-until-row" style="${(!d.repeat||d.repeat==='none')?'display:none':''}">
+      <label>반복 종료일 (선택)</label>
+      <input type="date" id="c-repeat-until" value="${d.repeat_until||''}" />
+    </div>
+    <div class="input-row">
       <label>메모 (선택)</label>
       <textarea id="c-note" placeholder="추가 메모...">${escapeHtml(d.note||'')}</textarea>
     </div>
@@ -3220,6 +3278,9 @@ function openContentModal(item, defaultDate) {
       <button class="btn" id="c-save">${isEdit ? '저장' : '추가'}</button>
     </div>
   `);
+  $('#c-repeat').addEventListener('change', e => {
+    $('#c-repeat-until-row').style.display = e.target.value === 'none' ? 'none' : '';
+  });
   let selectedCat = initCat;
   $$('#modal .cat-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3242,12 +3303,15 @@ function openContentModal(item, defaultDate) {
   $('#c-save').addEventListener('click', async () => {
     const topic = $('#c-topic').value.trim();
     if (!topic) { toast('내용을 입력하세요', 'error'); return; }
+    const repeatVal = $('#c-repeat').value;
     const itemData = {
       date: $('#c-date').value,
       category: selectedCat,
       format: selectedCat === '콘텐츠' ? ($('#c-format')?.value || '피드') : null,
       topic, assignee: $('#c-assignee').value,
-      status: $('#c-status').value, note: $('#c-note').value.trim()
+      status: $('#c-status').value, note: $('#c-note').value.trim(),
+      repeat: repeatVal,
+      repeat_until: repeatVal === 'none' ? null : ($('#c-repeat-until').value || null),
     };
     $('#c-save').disabled = true;
     if (isEdit) await updateTeamItem(item.id, itemData);
@@ -3346,10 +3410,57 @@ function openMinute(item) {
     );
   }
 
+  renderAgendaInMinute();
   renderMinutes();
   if (titleEl) titleEl.oninput = () => scheduleMinuteAutoSave();
   if (dateEl) dateEl.onchange = () => scheduleMinuteAutoSave();
   if (editorEl) editorEl.oninput = () => scheduleMinuteAutoSave();
+}
+
+function renderAgendaInMinute() {
+  const box = $('#mn-agenda-box');
+  const list = $('#mn-agenda-list');
+  const countEl = $('#mn-agenda-count');
+  if (!box || !list) return;
+
+  const agendas = teamItems.filter(x =>
+    x.type === 'task' && !x.data?.deleted && x.data.is_agenda && x.data.status !== 'done'
+  );
+
+  if (agendas.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = '';
+  if (countEl) countEl.textContent = `(${agendas.length})`;
+
+  list.innerHTML = agendas.map(t => {
+    const mi = MEMBERS.findIndex(m => m.name === t.data.assignee);
+    const nick = mi >= 0 ? MEMBERS[mi].nick : (t.data.assignee || '');
+    const color = ['#f5a623','#ff6b6b','#b07cff'][mi] || 'var(--muted)';
+    return `
+      <label class="mn-agenda-item" data-agenda-id="${t.id}" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:6px 8px;border-radius:6px;background:var(--panel);">
+        <input type="checkbox" class="mn-agenda-cb" data-id="${t.id}" style="margin-top:2px;cursor:pointer;" />
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;line-height:1.4;">${escapeHtml(t.data.title)}</div>
+          ${t.data.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:pre-wrap;">${escapeHtml(t.data.note)}</div>` : ''}
+        </div>
+        <span style="font-size:11px;color:${color};white-space:nowrap;">${escapeHtml(nick)}</span>
+      </label>`;
+  }).join('');
+
+  list.querySelectorAll('.mn-agenda-cb').forEach(cb => {
+    cb.addEventListener('change', async (e) => {
+      const id = e.target.dataset.id;
+      const item = teamItems.find(x => x.id === id);
+      if (!item) return;
+      e.target.disabled = true;
+      await updateTeamItem(id, { ...item.data, status: 'done' });
+      renderAgendaInMinute();
+      if (activeTab === 'tasks') renderTasks();
+      toast('논의 완료 ✓', 'success');
+    });
+  });
 }
 
 function scheduleMinuteAutoSave() {
@@ -3512,6 +3623,9 @@ let mnImgPendingGrid = false;
     const apply = () => { const v = parseInt(input.value); if (v >= 50 && v <= 1200) { img.style.width = v + 'px'; img.style.height = 'auto'; } p.remove(); mnPopup = null; scheduleMinuteAutoSave(); };
     btn.addEventListener('click', apply);
     input.addEventListener('keydown', e2 => { if (e2.key === 'Enter') apply(); if (e2.key === 'Escape') { p.remove(); mnPopup = null; } });
+    setTimeout(() => document.addEventListener('click', function outsideClick(ev) {
+      if (!p.contains(ev.target) && ev.target !== img) { if (mnPopup) { mnPopup.remove(); mnPopup = null; } document.removeEventListener('click', outsideClick); }
+    }), 50);
   });
 
   // 키보드 단축키
