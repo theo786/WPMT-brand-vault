@@ -1010,6 +1010,34 @@
     background:var(--accent); color:#181014; border-color:var(--accent);
   }
   .si-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:10px; }
+  /* 정보 카테고리 칩 */
+  .si-cat-chip {
+    padding:6px 12px; border-radius:16px;
+    background:var(--panel-2); border:1px solid var(--border);
+    color:var(--muted); cursor:pointer; font-family:inherit;
+    font-size:12px; display:inline-flex; align-items:center; gap:6px;
+    transition:.12s; font-weight:500;
+  }
+  .si-cat-chip:hover { color:var(--text); border-color:var(--accent); }
+  .si-cat-chip.active {
+    background:var(--accent); color:#181014; border-color:var(--accent); font-weight:600;
+  }
+  .si-cat-chip .n {
+    background:rgba(0,0,0,0.2); padding:1px 7px; border-radius:8px;
+    font-size:11px; line-height:1.3;
+  }
+  .si-cat-chip.active .n { background:rgba(255,255,255,0.3); color:#181014; }
+  .si-group { margin-bottom:22px; }
+  .si-group-header {
+    font-size:13px; font-weight:700; color:var(--text);
+    padding:6px 2px; margin-bottom:10px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+  }
+  .si-group-count {
+    font-size:11px; color:var(--muted); font-weight:400;
+    background:var(--panel-2); padding:1px 7px; border-radius:8px;
+  }
   .si-item {
     background:var(--panel-2); border:1px solid var(--border); border-radius:12px;
     padding:14px 16px; display:flex; flex-direction:column; gap:5px;
@@ -4363,18 +4391,8 @@ async function loadAndRenderSharedInfo() {
   renderSharedInfo();
 }
 
-function renderSharedInfo() {
-  // 카테고리 필터 숨김
-  const catEl = $('#sharedInfoCats');
-  if (catEl) catEl.style.display = 'none';
-
-  const listEl = $('#sharedInfoList');
-  if (!sharedInfoData.length) {
-    listEl.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:20px 0;">등록된 정보가 없습니다.</div>`;
-    return;
-  }
-
-  listEl.innerHTML = `<div class="si-list">${sharedInfoData.map(i => `
+function siItemHtml(i) {
+  return `
     <div class="si-item" data-siid="${i.id}">
       <div class="si-label">${escapeHtml(i.label)}</div>
       <div class="si-value">${escapeHtml(i.value)}</div>
@@ -4384,8 +4402,63 @@ function renderSharedInfo() {
         <button class="nli-btn" data-si-edit="${i.id}">✏️</button>
         <button class="nli-btn del" data-si-del="${i.id}">🗑</button>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`;
+}
 
+function renderSharedInfo() {
+  const catEl = $('#sharedInfoCats');
+  const listEl = $('#sharedInfoList');
+
+  if (!sharedInfoData.length) {
+    if (catEl) catEl.style.display = 'none';
+    listEl.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:20px 0;">등록된 정보가 없습니다.</div>`;
+    return;
+  }
+
+  // 카테고리 카운트 집계
+  const catCounts = {};
+  sharedInfoData.forEach(i => {
+    const c = i.category || '기타';
+    catCounts[c] = (catCounts[c] || 0) + 1;
+  });
+  const sortedCats = Object.keys(catCounts).sort((a, b) => a.localeCompare(b, 'ko'));
+
+  // 활성 카테고리가 더 이상 존재하지 않으면 '전체'로 폴백
+  if (siActiveCat !== '전체' && !catCounts[siActiveCat]) siActiveCat = '전체';
+
+  // 카테고리 칩 렌더
+  if (catEl) {
+    catEl.style.display = 'flex';
+    catEl.innerHTML = `
+      <button class="si-cat-chip ${siActiveCat==='전체'?'active':''}" data-cat="전체">전체 <span class="n">${sharedInfoData.length}</span></button>
+      ${sortedCats.map(c => `
+        <button class="si-cat-chip ${siActiveCat===c?'active':''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)} <span class="n">${catCounts[c]}</span></button>
+      `).join('')}
+    `;
+    catEl.querySelectorAll('.si-cat-chip').forEach(b => {
+      b.addEventListener('click', () => { siActiveCat = b.dataset.cat; renderSharedInfo(); });
+    });
+  }
+
+  // 리스트 렌더 — 전체면 그룹별, 특정 카테고리면 평탄
+  if (siActiveCat === '전체') {
+    const grouped = {};
+    sharedInfoData.forEach(i => {
+      const c = i.category || '기타';
+      (grouped[c] = grouped[c] || []).push(i);
+    });
+    listEl.innerHTML = sortedCats.map(c => `
+      <div class="si-group">
+        <div class="si-group-header">${escapeHtml(c)} <span class="si-group-count">${grouped[c].length}</span></div>
+        <div class="si-list">${grouped[c].map(siItemHtml).join('')}</div>
+      </div>
+    `).join('');
+  } else {
+    const filtered = sharedInfoData.filter(i => (i.category || '기타') === siActiveCat);
+    listEl.innerHTML = `<div class="si-list">${filtered.map(siItemHtml).join('')}</div>`;
+  }
+
+  // 액션 바인딩
   listEl.querySelectorAll('.si-copy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       navigator.clipboard.writeText(btn.dataset.copy).then(() => toast('복사됨 ✓', 'success'));
