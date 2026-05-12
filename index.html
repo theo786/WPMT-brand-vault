@@ -325,8 +325,6 @@
   }
   .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tabs button:hover { color: var(--text); }
-  .tabs button.tab-dragging { opacity: 0.35; }
-  .tabs button.tab-drag-over { border-left: 2px solid var(--accent); }
 
   /* === 카테고리 사이드 === */
   .cats-row {
@@ -377,42 +375,58 @@
   .card {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 12px; padding: 14px;
-    display: flex; flex-direction: column; gap: 8px;
-    transition: border-color 0.12s;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: border-color 0.12s, transform 0.12s;
   }
   .card:hover { border-color: var(--accent); }
   .card .name {
-    font-weight: 700; font-size: 14px; line-height: 1.3;
-    word-break: break-word;
+    font-weight: 700; font-size: 15px; line-height: 1.3;
+    word-break: break-word; color: var(--text); text-decoration: none;
+    transition: color 0.12s;
   }
-  .card .handle { color: var(--accent); font-size: 12px; }
-  .card .url {
-    color: var(--muted); font-size: 11px; word-break: break-all;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+  .card .name:hover { color: var(--accent); }
   .card .cat-tag {
     display: inline-block; background: var(--panel-2); color: var(--accent);
     padding: 2px 8px; border-radius: 6px; font-size: 11px; align-self: flex-start;
   }
   .card .notes {
-    background: var(--panel-2); border-radius: 8px; padding: 8px;
-    font-size: 12px; color: var(--muted); min-height: 32px;
-    border: 1px solid transparent; cursor: text;
+    background: transparent; border-radius: 6px; padding: 4px 6px;
+    font-size: 12px; color: var(--muted); min-height: 22px;
+    border: 1px dashed transparent; cursor: text;
     white-space: pre-wrap; word-break: break-word;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
   }
-  .card .notes:focus, .card .notes:hover { border-color: var(--border); color: var(--text); outline: none; }
-  .card .notes:empty::before { content: '비고사항…'; color: var(--muted); opacity: 0.6; }
-  .card .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .card .actions button, .card .actions a {
-    background: var(--panel-2); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 10px; border-radius: 7px;
-    font-size: 11px; cursor: pointer; text-decoration: none;
-    display: inline-flex; align-items: center; gap: 4px; font-family: inherit;
+  .card .notes:hover { border-color: var(--border); }
+  .card .notes:focus { border-color: var(--accent); border-style: solid; background: var(--panel-2); color: var(--text); outline: none; }
+  .card .notes:empty::before { content: '메모 추가…'; color: var(--muted); opacity: 0.4; }
+  .card .actions {
+    display: flex; gap: 6px; align-items: center; margin-top: auto;
+    padding-top: 6px; border-top: 1px solid var(--border);
   }
-  .card .actions button:hover, .card .actions a:hover { background: var(--panel-3); }
-  .card .actions .del { color: var(--danger); }
-  .card .actions .ig { color: #e1306c; border-color: rgba(225,48,108,0.3); }
-  .card .actions .yt { color: #ff3b3b; border-color: rgba(255,59,59,0.3); }
+  .card .actions select {
+    flex: 1; min-width: 0;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 26px 6px 10px;
+    border-radius: 7px;
+    font-size: 11px; font-family: inherit;
+    cursor: pointer;
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23a99a8a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .card .actions select:hover { border-color: var(--accent); background-color: var(--panel-3); }
+  .card .actions select:focus { border-color: var(--accent); outline: none; }
+  .card .actions .del {
+    background: transparent; border: 1px solid transparent;
+    color: var(--muted); padding: 6px 8px; border-radius: 7px;
+    font-size: 13px; cursor: pointer; font-family: inherit;
+    transition: color 0.12s, background 0.12s, border-color 0.12s;
+  }
+  .card .actions .del:hover { color: var(--danger); border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.08); }
 
   .empty {
     text-align: center; padding: 60px 20px;
@@ -524,6 +538,76 @@
   }
   .task-col-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
   .member-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .member-nick {
+    outline: none; border-radius: 4px; padding: 1px 4px; margin: -1px -4px;
+    cursor: text; transition: background 0.12s, box-shadow 0.12s;
+  }
+  .member-nick:hover { background: var(--panel-2); }
+  .member-nick:focus { background: var(--panel-2); box-shadow: 0 0 0 1px var(--accent); }
+  .member-nick-edit {
+    background: none; border: none; padding: 2px; cursor: pointer;
+    color: var(--muted); font-size: 10px; opacity: 0; transition: opacity 0.12s;
+  }
+  .task-col-title:hover .member-nick-edit { opacity: 1; }
+
+  /* ===== 회의 어젠다 보드 ===== */
+  .agenda-board {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  @media (max-width: 900px) { .agenda-board { grid-template-columns: 1fr; } }
+  .agenda-col {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; min-height: 240px;
+  }
+  .agenda-col-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
+  }
+  .agenda-col-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .agenda-quick-add {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px;
+    color: var(--text); font-family: inherit;
+    transition: border-color 0.12s;
+  }
+  .agenda-quick-add::placeholder { color: var(--muted); opacity: 0.7; }
+  .agenda-quick-add:focus { outline: none; border-color: var(--accent); }
+  .agenda-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+    transition: border-color 0.12s;
+  }
+  .agenda-item:hover { border-color: var(--accent); }
+  .agenda-item input[type="checkbox"] {
+    margin-top: 2px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0;
+  }
+  .agenda-item-text {
+    flex: 1; font-size: 13px; line-height: 1.4; word-break: break-word;
+    outline: none; cursor: text; border-radius: 4px; padding: 1px 3px; margin: -1px -3px;
+  }
+  .agenda-item-text:focus { background: rgba(245,166,35,0.08); }
+  .agenda-item-del {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    padding: 0 2px; font-size: 14px; opacity: 0; transition: opacity 0.12s, color 0.12s;
+  }
+  .agenda-item:hover .agenda-item-del { opacity: 1; }
+  .agenda-item-del:hover { color: var(--danger); }
+  .agenda-empty {
+    text-align: center; color: var(--muted); font-size: 12px;
+    padding: 16px 0; opacity: 0.6;
+  }
+  .agenda-done-toggle {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted); padding: 6px 10px; border-radius: 7px;
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto;
+  }
+  .agenda-done-toggle:hover { color: var(--text); border-color: var(--accent); }
+  .agenda-done-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .agenda-done-list .agenda-item { opacity: 0.55; }
+  .agenda-done-list .agenda-item-text { text-decoration: line-through; }
   .task-card {
     background: var(--panel-2); border: 1px solid var(--border);
     border-radius: 10px; padding: 12px;
@@ -1205,7 +1289,6 @@
       <button data-tab="figma">🎨 피그마</button>
       <button data-tab="trash">🗑 휴지통</button>
       <button data-tab="sharedinfo">🔐 정보</button>
-      <button data-tab="settings" style="margin-left:auto;">⚙️ 설정</button>
     </div>
 
     <!-- 콘텐츠 스케줄 뷰 -->
@@ -1233,65 +1316,13 @@
       <div class="task-board" id="taskBoard"></div>
     </section>
 
-    <!-- 회의록 뷰 -->
+    <!-- 회의록 뷰 — 멤버별 어젠다 보드 -->
     <section id="minutesView" style="display:none">
-      <div class="minute-3col" id="minuteLayout">
-        <div class="agenda-panel">
-          <div class="agenda-panel-header">
-            <div class="agenda-panel-title">💬 회의 어젠다</div>
-            <div class="agenda-panel-count" id="agendaPanelCount">0</div>
-          </div>
-          <div class="agenda-panel-list" id="agendaPanelList"></div>
-          <div class="agenda-trash-drawer" id="agendaTrashDrawer" style="display:none;"></div>
-          <div class="agenda-panel-footer">
-            <button class="agenda-footer-btn add" id="addAgendaBtn">+ 어젠다 추가</button>
-            <button class="agenda-footer-btn" id="toggleAgendaTrashBtn" title="완료된 어젠다 보기/숨기기">🗑 <span class="badge" id="agendaTrashCount">0</span></button>
-          </div>
-        </div>
-        <div class="snote-sidebar">
-          <div class="snote-sidebar-top">
-            <button class="btn-primary" id="addMinuteBtn" style="width:100%;text-align:center;">+ 새 회의록</button>
-          </div>
-          <div id="minuteList"></div>
-        </div>
-        <div class="snote-editor-panel">
-          <div class="snote-empty" id="minuteEmpty">← 회의록을 선택하거나 새로 만드세요</div>
-          <div class="snote-editor-wrap" id="minuteEditorWrap" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-              <input type="date" id="mn-date" class="snote-title-input" style="font-size:14px;font-weight:400;" />
-              <input id="mn-title" class="snote-title-input" placeholder="회의록 제목" />
-            </div>
-            <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">참석자</div>
-              <div id="mn-attendees" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-            </div>
-            <div class="editor-toolbar" id="minuteToolbar">
-              <button data-mcmd="h1" title="제목1 (⌘⌥1)">H1<span class="kb">⌘⌥1</span></button>
-              <button data-mcmd="h2" title="제목2 (⌘⌥2)">H2<span class="kb">⌘⌥2</span></button>
-              <button data-mcmd="h3" title="제목3 (⌘⌥3)">H3<span class="kb">⌘⌥3</span></button>
-              <div class="sep"></div>
-              <button data-mcmd="bold" title="굵게 (⌘B)"><b>B</b><span class="kb">⌘B</span></button>
-              <button data-mcmd="italic" title="기울임 (⌘I)"><i>I</i><span class="kb">⌘I</span></button>
-              <div class="sep"></div>
-              <button data-mcmd="ul" title="점 목록 (⌘⇧8)">• 목록<span class="kb">⌘⇧8</span></button>
-              <button data-mcmd="ol" title="번호 목록 (⌘⇧7)">① 목록<span class="kb">⌘⇧7</span></button>
-              <div class="sep"></div>
-              <button data-mcmd="img" title="이미지 삽입">🖼 이미지</button>
-              <button data-mcmd="grid" title="이미지 2열 그리드">⊞ 그리드</button>
-              <button data-mcmd="toggle" title="접기/펼치기 블록">▶ 접기</button>
-              <div class="sep"></div>
-              <button id="minuteFullscreenBtn" title="풀스크린 (⌘⇧F)">⛶</button>
-            </div>
-            <div class="rich-editor snote-rich" id="mn-editor" contenteditable="true"></div>
-            <input type="file" id="mn-img-input" accept="image/*" multiple style="display:none" />
-            <div class="snote-actions">
-              <span id="minuteSaveStatus" style="font-size:12px;color:var(--muted);">저장됨</span>
-              <button class="btn ghost" id="minuteCloseBtn" style="font-size:12px;">✕ 닫기</button>
-              <button class="btn ghost" id="minuteDeleteBtn" style="color:var(--danger);font-size:12px;">🗑 삭제</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-header">
+        <h2>💬 회의 어젠다</h2>
+        <span style="font-size:12px;color:var(--muted);">멤버별 논의거리를 적으면 업무 탭에 자동 연동됩니다</span>
       </div>
+      <div class="agenda-board" id="agendaBoard"></div>
     </section>
 
     <!-- 레퍼런스 뷰 — 북마크만 심플하게 -->
@@ -1435,15 +1466,6 @@
       </div>
       <div id="sharedInfoCats" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
       <div id="sharedInfoList"></div>
-    </section>
-
-    <section id="settingsView" style="display:none">
-      <div class="block" style="max-width:520px;margin:0 auto;">
-        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">⚙️ 탭 이름 수정</h3>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">탭 이름을 원하는 대로 변경할 수 있어요. 이모지 포함 가능.</p>
-        <div id="tabNameEditors" style="display:flex;flex-direction:column;gap:10px;"></div>
-        <button class="btn-primary" id="saveTabNamesBtn" style="margin-top:20px;width:100%;">저장</button>
-      </div>
     </section>
 
 <!-- 모달 -->
@@ -2403,18 +2425,12 @@ function renderBookmarks() {
 }
 
 function renderCard(b) {
-  const igYt = isInstagramOrThreads(b.url) ? 'ig' : isYoutube(b.url) ? 'yt' : null;
   return `
     <div class="card" data-id="${b.id}">
       <span class="cat-tag">${escapeHtml(b.category)}</span>
-      <div class="name" data-field="name" contenteditable="true" spellcheck="false">${escapeHtml(b.name)}</div>
-      ${b.handle ? `<div class="handle">${escapeHtml(b.handle)}</div>` : ''}
-      <div class="url" title="${escapeHtml(b.url)}">${escapeHtml(b.url)}</div>
+      <a class="name" href="${escapeHtml(b.url)}" target="_blank" rel="noopener" data-field="name" title="${escapeHtml(b.url)}">${escapeHtml(b.name)}</a>
       <div class="notes" data-field="notes" contenteditable="true" spellcheck="false">${escapeHtml(b.notes || '')}</div>
       <div class="actions">
-        <a href="${escapeHtml(b.url)}" target="_blank" rel="noopener">↗ 열기</a>
-        ${igYt === 'ig' ? `<button class="ig" data-act="ig">🎞 IG 다운로드</button>` : ''}
-        ${igYt === 'yt' ? `<button class="yt" data-act="yt">🎬 YT 다운로드</button>` : ''}
         <select data-act="movecat" title="카테고리 변경">
           ${getCategories().map(c => `<option value="${escapeHtml(c)}" ${catEq(c, b.category) ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
         </select>
@@ -2437,11 +2453,6 @@ function bindCardEvents(card) {
         Storage.scheduleSave();
       }
     });
-    el.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey && el.dataset.field === 'name') {
-        e.preventDefault(); el.blur();
-      }
-    });
   });
   card.querySelector('[data-act="del"]')?.addEventListener('click', () => {
     if (!confirm('삭제할까요?')) return;
@@ -2455,14 +2466,6 @@ function bindCardEvents(card) {
     it.category = e.target.value;
     Storage.scheduleSave();
     renderAll();
-  });
-  card.querySelector('[data-act="ig"]')?.addEventListener('click', () => {
-    const it = bookmarks.find(b => b.id === id);
-    if (it) openIgDownloader(it.url);
-  });
-  card.querySelector('[data-act="yt"]')?.addEventListener('click', () => {
-    const it = bookmarks.find(b => b.id === id);
-    if (it) openYtDownloader(it.url);
   });
 }
 
@@ -2822,90 +2825,18 @@ function switchTab(tab) {
   $('#figmaView').style.display         = tab === 'figma'       ? 'block' : 'none';
   $('#trashView').style.display         = tab === 'trash'       ? 'block' : 'none';
   $('#sharedinfoView').style.display    = tab === 'sharedinfo'  ? 'block' : 'none';
-  $('#settingsView').style.display      = tab === 'settings'    ? 'block' : 'none';
   if (tab === 'schedule')    renderContentSchedule();
   if (tab === 'tasks')       renderTasks();
-  if (tab === 'minutes')     { renderMinutes(); renderAgendaPanel(); }
+  if (tab === 'minutes')     renderAgendaBoard();
   if (tab === 'seminotion')  renderNoteList();
   if (tab === 'notion')      renderNotionList();
   if (tab === 'figma')       renderNotionList();
   if (tab === 'trash')       renderTrash();
-  if (tab === 'settings')    renderSettingsTab();
   if (tab === 'sharedinfo')  loadAndRenderSharedInfo();
   if ((tab === 'filevault' || tab === 'random') && isDriveConnected() && driveFiles.length === 0) refreshDriveFiles();
 }
 
 $$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-
-// 탭 드래그앤드랍 순서 변경
-(function() {
-  const tabsEl = document.querySelector('.tabs');
-  if (!tabsEl) return;
-
-  function saveTabOrder() {
-    const order = [...tabsEl.querySelectorAll('button[data-tab]')].map(b => b.dataset.tab);
-    localStorage.setItem('wpmt_tab_order', JSON.stringify(order));
-  }
-
-  function applyTabOrder() {
-    const saved = JSON.parse(localStorage.getItem('wpmt_tab_order') || 'null');
-    if (!saved) return;
-    saved.forEach(tabId => {
-      const btn = tabsEl.querySelector(`button[data-tab="${tabId}"]`);
-      if (btn) tabsEl.appendChild(btn);
-    });
-  }
-
-  function saveTabNames() {
-    const names = {};
-    tabsEl.querySelectorAll('button[data-tab]').forEach(b => { names[b.dataset.tab] = b.textContent; });
-    localStorage.setItem('wpmt_tab_names', JSON.stringify(names));
-  }
-
-  function applyTabNames() {
-    const saved = JSON.parse(localStorage.getItem('wpmt_tab_names') || 'null');
-    if (!saved) return;
-    tabsEl.querySelectorAll('button[data-tab]').forEach(b => {
-      if (saved[b.dataset.tab]) b.textContent = saved[b.dataset.tab];
-    });
-  }
-
-  applyTabOrder();
-  applyTabNames();
-
-  let dragSrc = null;
-
-  tabsEl.querySelectorAll('button[data-tab]').forEach(btn => {
-    btn.draggable = true;
-
-    btn.addEventListener('dragstart', (e) => {
-      dragSrc = btn;
-      btn.classList.add('tab-dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    btn.addEventListener('dragend', () => {
-      btn.classList.remove('tab-dragging');
-      tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('tab-drag-over'));
-      saveTabOrder();
-    });
-    btn.addEventListener('dragover', (e) => {
-      if (!dragSrc || dragSrc === btn) return;
-      e.preventDefault();
-      tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('tab-drag-over'));
-      btn.classList.add('tab-drag-over');
-    });
-    btn.addEventListener('drop', (e) => {
-      if (!dragSrc || dragSrc === btn) return;
-      e.preventDefault();
-      const btns = [...tabsEl.querySelectorAll('button[data-tab]')];
-      const fromIdx = btns.indexOf(dragSrc);
-      const toIdx = btns.indexOf(btn);
-      if (fromIdx < toIdx) btn.after(dragSrc);
-      else btn.before(dragSrc);
-      btn.classList.remove('tab-drag-over');
-    });
-  });
-})();
 
 $('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
 $('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
@@ -3032,6 +2963,30 @@ async function loadTeamBoard() {
   const banner = $('#teamDbBanner');
   if (banner) banner.style.display = 'none';
   teamItems = data || [];
+  applyMemberNicks();
+}
+
+function applyMemberNicks() {
+  const cfg = teamItems.find(x => x.type === 'config' && x.data?.key === 'member_nicks' && !x.data?.deleted);
+  if (!cfg) return;
+  MEMBERS.forEach(m => {
+    if (cfg.data.nicks?.[m.name]) m.nick = cfg.data.nicks[m.name];
+  });
+}
+
+async function saveMemberNick(memberName, newNick) {
+  const trimmed = (newNick || '').trim();
+  if (!trimmed) return;
+  const member = MEMBERS.find(m => m.name === memberName);
+  if (!member || member.nick === trimmed) return;
+  member.nick = trimmed;
+  const cfg = teamItems.find(x => x.type === 'config' && x.data?.key === 'member_nicks' && !x.data?.deleted);
+  if (cfg) {
+    const nicks = { ...(cfg.data.nicks || {}), [memberName]: trimmed };
+    await updateTeamItem(cfg.id, { ...cfg.data, nicks });
+  } else {
+    await addTeamItem('config', { key: 'member_nicks', nicks: { [memberName]: trimmed } });
+  }
 }
 
 async function addTeamItem(type, itemData) {
@@ -3126,7 +3081,8 @@ function renderTasks() {
         <div class="task-col-header">
           <div class="task-col-title">
             <span class="member-dot dot-${mi}"></span>
-            <span>${escapeHtml(m.nick)}</span>
+            <span class="member-nick" contenteditable="true" spellcheck="false" data-member="${escapeHtml(m.name)}">${escapeHtml(m.nick)}</span>
+            <span class="member-nick-edit" title="이름 클릭해서 수정">✏️</span>
           </div>
           <span style="font-size:11px;color:var(--muted);">${activeTasks.length}개${doneTasks.length>0?` · ✓ ${doneTasks.length}`:''}</span>
         </div>
@@ -3201,6 +3157,27 @@ function wireTaskEvents() {
       renderTasks();
     })
   );
+  $$('.member-nick').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') {
+        const m = MEMBERS.find(x => x.name === el.dataset.member);
+        if (m) el.textContent = m.nick;
+        el.blur();
+      }
+    });
+    el.addEventListener('blur', async () => {
+      const newNick = el.textContent.trim();
+      const m = MEMBERS.find(x => x.name === el.dataset.member);
+      if (!m) return;
+      if (!newNick) { el.textContent = m.nick; return; }
+      if (newNick === m.nick) return;
+      await saveMemberNick(el.dataset.member, newNick);
+      renderTasks();
+      if (activeTab === 'minutes') renderAgendaBoard();
+      toast('이름 변경됨 ✓', 'success');
+    });
+  });
 }
 
 function openTaskModal(item, defaultMember, opts) {
@@ -3557,395 +3534,148 @@ function openContentModal(item, defaultDate) {
 }
 
 /* ============================================================
- * 회의록 (패널 레이아웃)
+ * 회의 어젠다 보드 — 멤버별 할 일을 적으면 업무 탭으로 자동 연동
  * ============================================================ */
-let activeMinuteId = null;
-let minuteAutoSaveTimer = null;
+const expandedDoneAgendas = {};
 
-function getMinutes() {
-  return teamItems
-    .filter(x => x.type === 'minute' && !x.data?.deleted)
-    .sort((a, b) => (b.data.date || '').localeCompare(a.data.date || ''));
-}
-
-function renderMinutes() {
-  const list = $('#minuteList');
-  if (!list) return;
-  const minutes = getMinutes();
-  if (minutes.length === 0) {
-    list.innerHTML = `<div style="padding:16px;text-align:center;font-size:12px;color:var(--muted);">회의록이 없어요<br>위 버튼으로 만들어보세요!</div>`;
-    return;
-  }
-  list.innerHTML = minutes.map(m => {
-    const d = m.data;
-    const isActive = m.id === activeMinuteId;
-    return `
-      <div class="note-list-item ${isActive ? 'active' : ''}" data-minuteid="${m.id}">
-        <div class="nli-title">${escapeHtml(d.title || '제목 없음')}</div>
-        <div class="nli-date">${d.date || ''}</div>
-        <div class="nli-actions">
-          <button class="nli-btn edit-btn">✏️ 수정</button>
-          <button class="nli-btn del del-btn">🗑 삭제</button>
-        </div>
-      </div>`;
-  }).join('');
-  list.querySelectorAll('.note-list-item').forEach(item => {
-    item.querySelector('.edit-btn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      const minute = teamItems.find(x => x.id === item.dataset.minuteid);
-      if (minute) openMinute(minute);
-    });
-    item.querySelector('.del-btn')?.addEventListener('click', async e => {
-      e.stopPropagation();
-      if (!confirm('이 회의록을 삭제할까요?')) return;
-      await deleteTeamItem(item.dataset.minuteid);
-      if (activeMinuteId === item.dataset.minuteid) {
-        activeMinuteId = null;
-        const layout = $('#minuteLayout');
-        const fsBtn = $('#minuteFullscreenBtn');
-        if (layout?.classList.contains('fullscreen')) { layout.classList.remove('fullscreen'); if (fsBtn) { fsBtn.textContent = '⛶'; fsBtn.title = '풀스크린 (⌘⇧F)'; } }
-        $('#minuteEmpty').style.display = 'flex';
-        $('#minuteEditorWrap').style.display = 'none';
-      }
-      renderMinutes();
-      toast('삭제됨 (휴지통에서 복원 가능)');
-    });
-    item.addEventListener('click', () => {
-      const minute = teamItems.find(x => x.id === item.dataset.minuteid);
-      if (minute) openMinute(minute);
-    });
-  });
-}
-
-function openMinute(item) {
-  if (activeMinuteId && activeMinuteId !== item.id) flushMinuteAutoSave();
-  activeMinuteId = item.id;
-  const d = item.data;
-  const empty = $('#minuteEmpty');
-  const wrap = $('#minuteEditorWrap');
-  if (empty) empty.style.display = 'none';
-  if (wrap) wrap.style.display = 'flex';
-
-  const dateEl = $('#mn-date');
-  const titleEl = $('#mn-title');
-  const editorEl = $('#mn-editor');
-  if (dateEl) dateEl.value = d.date || fmtDate(new Date());
-  if (titleEl) titleEl.value = d.title || '';
-  if (editorEl) editorEl.innerHTML = d.content || '<p></p>';
-
-  const attendeesEl = $('#mn-attendees');
-  if (attendeesEl) {
-    attendeesEl.innerHTML = MEMBERS.map((m, mi) => `
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" class="mn-attendee-cb" value="${m.name}" ${(d.attendees||[]).includes(m.name)?'checked':''} />
-        <span style="color:${['#f5a623','#ff6b6b','#b07cff'][mi]}">${m.nick}</span>
-      </label>`).join('');
-    attendeesEl.querySelectorAll('.mn-attendee-cb').forEach(cb =>
-      cb.addEventListener('change', () => scheduleMinuteAutoSave())
-    );
-  }
-
-  renderAgendaPanel();
-  renderMinutes();
-  if (titleEl) titleEl.oninput = () => scheduleMinuteAutoSave();
-  if (dateEl) dateEl.onchange = () => scheduleMinuteAutoSave();
-  if (editorEl) editorEl.oninput = () => scheduleMinuteAutoSave();
-}
-
-function renderAgendaPanel() {
-  const list = $('#agendaPanelList');
-  const countEl = $('#agendaPanelCount');
-  const trashEl = $('#agendaTrashDrawer');
-  const trashCountEl = $('#agendaTrashCount');
-  if (!list) return;
-
+function renderAgendaBoard() {
+  const board = $('#agendaBoard');
+  if (!board) return;
   const allAgendas = teamItems.filter(x =>
     x.type === 'task' && !x.data?.deleted && x.data.is_agenda
   );
-  const agendas = allAgendas.filter(t => t.data.status !== 'done');
-  const doneAgendas = allAgendas.filter(t => t.data.status === 'done')
-    .sort((a,b) => (b.data.updated_at||b.created_at||'').localeCompare(a.data.updated_at||a.created_at||''));
+  board.innerHTML = MEMBERS.map((m, mi) => {
+    const myItems = allAgendas.filter(t => t.data.assignee === m.name);
+    const active = myItems.filter(t => t.data.status !== 'done');
+    const done = myItems.filter(t => t.data.status === 'done')
+      .sort((a,b) => (b.data.updated_at||b.created_at||'').localeCompare(a.data.updated_at||a.created_at||''));
+    const isExpanded = expandedDoneAgendas[m.name];
 
-  if (countEl) countEl.textContent = String(agendas.length);
-  if (trashCountEl) trashCountEl.textContent = String(doneAgendas.length);
+    const activeHtml = active.length
+      ? active.map(t => agendaItemHtml(t, false)).join('')
+      : `<div class="agenda-empty">아직 없어요. 위에서 추가하세요.</div>`;
+    const doneHtml = done.map(t => agendaItemHtml(t, true)).join('');
 
-  if (agendas.length === 0) {
-    list.innerHTML = `<div class="agenda-panel-empty">아직 어젠다가 없어요.<br>아래 <b>+ 어젠다 추가</b> 또는<br>업무 탭에서 추가하세요.</div>`;
-  } else {
-    list.innerHTML = agendas.map(t => {
-      const mi = MEMBERS.findIndex(m => m.name === t.data.assignee);
-      const nick = mi >= 0 ? MEMBERS[mi].nick : (t.data.assignee || '');
-      const color = ['#f5a623','#ff6b6b','#b07cff'][mi] || 'var(--muted)';
-      return `
-        <div class="agenda-card" data-id="${t.id}">
-          <input type="checkbox" class="agenda-panel-cb" data-id="${t.id}" title="논의 완료" />
-          <div class="agenda-card-body">
-            <div class="agenda-card-title">${escapeHtml(t.data.title)}</div>
-            ${t.data.note ? `<div class="agenda-card-note">${escapeHtml(t.data.note)}</div>` : ''}
-            <div class="agenda-card-meta">
-              <span class="agenda-card-assignee" style="color:${color};">${escapeHtml(nick)}</span>
-            </div>
+    return `
+      <div class="agenda-col">
+        <div class="agenda-col-header">
+          <div class="agenda-col-title">
+            <span class="member-dot dot-${mi}"></span>
+            <span class="member-nick" contenteditable="true" spellcheck="false" data-member="${escapeHtml(m.name)}">${escapeHtml(m.nick)}</span>
+            <span class="member-nick-edit" title="이름 클릭해서 수정">✏️</span>
           </div>
-        </div>`;
-    }).join('');
+          <span style="font-size:11px;color:var(--muted);">${active.length}개${done.length>0?` · ✓ ${done.length}`:''}</span>
+        </div>
+        <input class="agenda-quick-add" data-member="${escapeHtml(m.name)}" placeholder="할 일을 적고 Enter…" />
+        <div class="agenda-active-list">${activeHtml}</div>
+        ${done.length > 0 ? `
+          <button class="agenda-done-toggle" data-act="toggle-agenda-done" data-member="${escapeHtml(m.name)}">
+            <span>✓ 완료 (${done.length})</span>
+            <span>${isExpanded?'▲':'▼'}</span>
+          </button>
+          <div class="agenda-done-list" style="display:${isExpanded?'flex':'none'};">${doneHtml}</div>
+        ` : ''}
+      </div>`;
+  }).join('');
+  wireAgendaEvents();
+}
 
-    list.querySelectorAll('.agenda-panel-cb').forEach(cb => {
-      cb.addEventListener('change', async (e) => {
-        const id = e.target.dataset.id;
-        const item = teamItems.find(x => x.id === id);
-        if (!item) return;
-        e.target.disabled = true;
-        await updateTeamItem(id, { ...item.data, status: 'done' });
-        renderAgendaPanel();
-        if (activeTab === 'tasks') renderTasks();
-        toast('논의 완료 ✓', 'success');
+function agendaItemHtml(t, isDone) {
+  return `
+    <div class="agenda-item" data-id="${t.id}">
+      <input type="checkbox" data-act="toggle-agenda" data-id="${t.id}" ${isDone?'checked':''} title="${isDone?'다시 할 일로':'완료'}" />
+      <span class="agenda-item-text" contenteditable="true" spellcheck="false" data-id="${t.id}">${escapeHtml(t.data.title)}</span>
+      <button class="agenda-item-del" data-act="del-agenda" data-id="${t.id}" title="삭제">×</button>
+    </div>`;
+}
+
+function wireAgendaEvents() {
+  $$('.agenda-quick-add').forEach(input => {
+    input.addEventListener('keydown', async e => {
+      if (e.key !== 'Enter') return;
+      const title = input.value.trim();
+      if (!title) return;
+      input.disabled = true;
+      await addTeamItem('task', {
+        title, assignee: input.dataset.member,
+        status: 'todo', is_agenda: true,
+        created_at: new Date().toISOString(),
       });
+      input.value = '';
+      input.disabled = false;
+      renderAgendaBoard();
+      if (activeTab === 'tasks') renderTasks();
+      input.focus();
     });
-  }
-
-  // 보관함 (완료된 어젠다)
-  if (trashEl) {
-    if (doneAgendas.length === 0) {
-      trashEl.innerHTML = `<div class="agenda-trash-empty">완료된 어젠다가 없습니다</div>`;
-    } else {
-      trashEl.innerHTML = doneAgendas.map(t => `
-        <div class="agenda-trash-card">
-          <div class="agenda-trash-title">${escapeHtml(t.data.title)}</div>
-          <button class="agenda-trash-restore" data-id="${t.id}">↩ 복원</button>
-          <button class="agenda-trash-delete" data-id="${t.id}" title="영구 삭제">✕</button>
-        </div>`).join('');
-
-      trashEl.querySelectorAll('.agenda-trash-restore').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          const item = teamItems.find(x => x.id === id);
-          if (!item) return;
-          btn.disabled = true;
-          await updateTeamItem(id, { ...item.data, status: 'todo' });
-          renderAgendaPanel();
-          if (activeTab === 'tasks') renderTasks();
-          toast('어젠다 복원됨 ↩', 'success');
-        });
-      });
-
-      trashEl.querySelectorAll('.agenda-trash-delete').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('영구 삭제할까요? 복원 불가능합니다.')) return;
-          btn.disabled = true;
-          await hardDeleteTeamItem(btn.dataset.id);
-          renderAgendaPanel();
-          if (activeTab === 'tasks') renderTasks();
-          toast('영구 삭제됨');
-        });
-      });
-    }
-  }
+  });
+  $$('[data-act="toggle-agenda"]').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const item = teamItems.find(x => x.id === cb.dataset.id);
+      if (!item) return;
+      cb.disabled = true;
+      const newStatus = cb.checked ? 'done' : 'todo';
+      if (newStatus === 'done') expandedDoneAgendas[item.data.assignee] = true;
+      await updateTeamItem(item.id, { ...item.data, status: newStatus });
+      renderAgendaBoard();
+      if (activeTab === 'tasks') renderTasks();
+    });
+  });
+  $$('[data-act="del-agenda"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('삭제할까요?')) return;
+      await deleteTeamItem(btn.dataset.id);
+      renderAgendaBoard();
+      if (activeTab === 'tasks') renderTasks();
+      toast('삭제됨');
+    });
+  });
+  $$('[data-act="toggle-agenda-done"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.member;
+      expandedDoneAgendas[m] = !expandedDoneAgendas[m];
+      renderAgendaBoard();
+    });
+  });
+  $$('.agenda-item-text').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener('blur', async () => {
+      const item = teamItems.find(x => x.id === el.dataset.id);
+      if (!item) return;
+      const newTitle = el.textContent.trim();
+      if (!newTitle) { el.textContent = item.data.title; return; }
+      if (newTitle === item.data.title) return;
+      await updateTeamItem(item.id, { ...item.data, title: newTitle });
+      if (activeTab === 'tasks') renderTasks();
+    });
+  });
+  $$('.member-nick').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') {
+        const m = MEMBERS.find(x => x.name === el.dataset.member);
+        if (m) el.textContent = m.nick;
+        el.blur();
+      }
+    });
+    el.addEventListener('blur', async () => {
+      const newNick = el.textContent.trim();
+      const m = MEMBERS.find(x => x.name === el.dataset.member);
+      if (!m) return;
+      if (!newNick) { el.textContent = m.nick; return; }
+      if (newNick === m.nick) return;
+      await saveMemberNick(el.dataset.member, newNick);
+      renderAgendaBoard();
+      if (activeTab === 'tasks') renderTasks();
+      toast('이름 변경됨 ✓', 'success');
+    });
+  });
 }
 
-function scheduleMinuteAutoSave() {
-  clearTimeout(minuteAutoSaveTimer);
-  const status = $('#minuteSaveStatus');
-  if (status) status.textContent = '저장 중…';
-  minuteAutoSaveTimer = setTimeout(() => flushMinuteAutoSave(), 800);
-}
-
-async function flushMinuteAutoSave() {
-  clearTimeout(minuteAutoSaveTimer);
-  if (!activeMinuteId) return;
-  const dateEl = $('#mn-date');
-  const titleEl = $('#mn-title');
-  const editorEl = $('#mn-editor');
-  if (!titleEl || !editorEl) return;
-  const attendees = [...document.querySelectorAll('.mn-attendee-cb:checked')].map(c => c.value);
-  const itemData = {
-    date: dateEl?.value || fmtDate(new Date()),
-    title: titleEl.value.trim() || '제목 없음',
-    attendees, content: editorEl.innerHTML,
-    updated_at: new Date().toISOString(),
-  };
-  const ok = await updateTeamItem(activeMinuteId, itemData);
-  const status = $('#minuteSaveStatus');
-  if (status) status.textContent = ok ? '저장됨 ✓' : '저장 실패';
-  renderMinutes();
-}
-
-// 어젠다 패널 푸터 버튼
-$('#addAgendaBtn')?.addEventListener('click', () => {
-  openTaskModal(null, MEMBERS[0]?.name, { is_agenda: true });
-});
-$('#toggleAgendaTrashBtn')?.addEventListener('click', () => {
-  const drawer = $('#agendaTrashDrawer');
-  if (!drawer) return;
-  drawer.style.display = drawer.style.display === 'none' ? 'flex' : 'none';
-});
-
-// 새 회의록 버튼
-$('#addMinuteBtn')?.addEventListener('click', async () => {
-  await flushMinuteAutoSave();
-  const today = fmtDate(new Date());
-  const newMinute = await addTeamItem('minute', {
-    date: today, title: '새 회의록', attendees: [],
-    content: '<p></p>', updated_at: new Date().toISOString(),
-  });
-  if (!newMinute) return;
-  openMinute(newMinute);
-  const titleEl = $('#mn-title');
-  if (titleEl) { titleEl.focus(); titleEl.select(); }
-  const layout = $('#minuteLayout');
-  const fsBtn = $('#minuteFullscreenBtn');
-  if (layout && !layout.classList.contains('fullscreen')) {
-    layout.classList.add('fullscreen');
-    if (fsBtn) { fsBtn.textContent = '✕'; fsBtn.title = '풀스크린 종료 (ESC)'; }
-  }
-});
-
-// 닫기
-$('#minuteCloseBtn')?.addEventListener('click', async () => {
-  await flushMinuteAutoSave();
-  activeMinuteId = null;
-  // 풀스크린 종료
-  const layout = $('#minuteLayout');
-  const fsBtn = $('#minuteFullscreenBtn');
-  if (layout?.classList.contains('fullscreen')) {
-    layout.classList.remove('fullscreen');
-    if (fsBtn) { fsBtn.textContent = '⛶'; fsBtn.title = '풀스크린 (⌘⇧F)'; }
-  }
-  const empty = $('#minuteEmpty');
-  const wrap = $('#minuteEditorWrap');
-  if (empty) empty.style.display = 'flex';
-  if (wrap) wrap.style.display = 'none';
-  renderMinutes();
-});
-
-// 삭제
-$('#minuteDeleteBtn')?.addEventListener('click', async () => {
-  if (!activeMinuteId) return;
-  if (!confirm('이 회의록을 삭제할까요?')) return;
-  await deleteTeamItem(activeMinuteId);
-  activeMinuteId = null;
-  const empty = $('#minuteEmpty');
-  const wrap = $('#minuteEditorWrap');
-  if (empty) empty.style.display = 'flex';
-  if (wrap) wrap.style.display = 'none';
-  renderMinutes();
-  toast('삭제됨 (휴지통에서 복원 가능)');
-});
-
-// 툴바
-$('#minuteToolbar')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-mcmd]');
-  if (!btn) return;
-  const cmd = btn.dataset.mcmd;
-  const editorEl = $('#mn-editor');
-  if (!editorEl) return;
-  editorEl.focus();
-  if (cmd === 'bold') document.execCommand('bold');
-  else if (cmd === 'italic') document.execCommand('italic');
-  else if (cmd === 'h1') document.execCommand('formatBlock', false, 'h1');
-  else if (cmd === 'h2') document.execCommand('formatBlock', false, 'h2');
-  else if (cmd === 'h3') document.execCommand('formatBlock', false, 'h3');
-  else if (cmd === 'ul') document.execCommand('insertUnorderedList');
-  else if (cmd === 'ol') document.execCommand('insertOrderedList');
-  else if (cmd === 'img') { mnImgPendingGrid = false; $('#mn-img-input')?.click(); }
-  else if (cmd === 'grid') { mnImgPendingGrid = true; if ($('#mn-img-input')) { $('#mn-img-input').multiple = true; $('#mn-img-input').click(); } }
-  else if (cmd === 'toggle') {
-    const sel = window.getSelection();
-    const text = sel && sel.toString().trim() ? sel.toString() : '접기/펼치기 제목';
-    document.execCommand('insertHTML', false, `<details><summary>${text}</summary><p>내용을 입력하세요</p></details><p></p>`);
-  }
-});
-
-// 이미지 + 드래그앤드랍 + 리사이즈
-let mnImgPendingGrid = false;
-(function() {
-  const imgInput = $('#mn-img-input');
-  const editorEl = $('#mn-editor');
-  if (!imgInput || !editorEl) return;
-
-  function toDataURL(file) {
-    return new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file); });
-  }
-  function insertMnImg(url) {
-    document.execCommand('insertHTML', false, `<span class="img-wrap" contenteditable="false"><img src="${url}" style="width:280px;height:auto;" /></span><p></p>`);
-  }
-
-  imgInput.addEventListener('change', async () => {
-    const files = Array.from(imgInput.files);
-    if (!files.length) return;
-    editorEl.focus();
-    if (mnImgPendingGrid && files.length >= 2) {
-      let imgs = '';
-      for (const f of files) { imgs += `<img src="${await toDataURL(f)}" style="width:100%;height:auto;" />`; }
-      document.execCommand('insertHTML', false, `<div class="img-grid">${imgs}</div><p></p>`);
-    } else {
-      for (const f of files) insertMnImg(await toDataURL(f));
-    }
-    imgInput.value = '';
-    scheduleMinuteAutoSave();
-  });
-
-  editorEl.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); editorEl.classList.add('drag-over'); } });
-  editorEl.addEventListener('dragleave', () => editorEl.classList.remove('drag-over'));
-  editorEl.addEventListener('drop', async (e) => {
-    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
-    if (!files.length) return;
-    e.preventDefault(); editorEl.classList.remove('drag-over'); editorEl.focus();
-    for (const f of files) insertMnImg(await toDataURL(f));
-    scheduleMinuteAutoSave();
-  });
-
-  let mnPopup = null;
-  editorEl.addEventListener('click', (e) => {
-    const img = e.target.closest('.img-wrap img') || (e.target.tagName === 'IMG' ? e.target : null);
-    if (!img) { if (mnPopup) { mnPopup.remove(); mnPopup = null; } return; }
-    e.preventDefault();
-    if (mnPopup) { mnPopup.remove(); mnPopup = null; }
-    const wrap = img.closest('.img-wrap') || img.parentNode;
-    wrap.style.position = 'relative';
-    const p = document.createElement('div');
-    p.className = 'img-width-popup';
-    const curW = img.style.width ? parseInt(img.style.width) : 280;
-    p.innerHTML = `<span>가로</span><input type="number" value="${curW}" min="50" max="1200" step="10" /><span>px</span><button style="background:var(--accent);color:#000;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">적용</button>`;
-    wrap.appendChild(p); mnPopup = p;
-    const input = p.querySelector('input'); const btn = p.querySelector('button');
-    input.focus(); input.select();
-    const apply = () => { const v = parseInt(input.value); if (v >= 50 && v <= 1200) { img.style.width = v + 'px'; img.style.height = 'auto'; } p.remove(); mnPopup = null; scheduleMinuteAutoSave(); };
-    btn.addEventListener('click', apply);
-    input.addEventListener('keydown', e2 => { if (e2.key === 'Enter') apply(); if (e2.key === 'Escape') { p.remove(); mnPopup = null; } });
-    setTimeout(() => document.addEventListener('click', function outsideClick(ev) {
-      if (!p.contains(ev.target) && ev.target !== img) { if (mnPopup) { mnPopup.remove(); mnPopup = null; } document.removeEventListener('click', outsideClick); }
-    }), 50);
-  });
-
-  // 키보드 단축키
-  editorEl.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); document.execCommand('bold'); }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); document.execCommand('italic'); }
-    if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); flushMinuteAutoSave(); }
-    if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '1') { e.preventDefault(); document.execCommand('formatBlock', false, 'h1'); }
-    if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '2') { e.preventDefault(); document.execCommand('formatBlock', false, 'h2'); }
-    if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '3') { e.preventDefault(); document.execCommand('formatBlock', false, 'h3'); }
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '8') { e.preventDefault(); document.execCommand('insertUnorderedList'); }
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '7') { e.preventDefault(); document.execCommand('insertOrderedList'); }
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); $('#minuteFullscreenBtn')?.click(); }
-  });
-})();
-
-// 풀스크린
-(function() {
-  const layout = $('#minuteLayout');
-  const btn = $('#minuteFullscreenBtn');
-  if (!btn || !layout) return;
-  function toggle() {
-    const on = layout.classList.toggle('fullscreen');
-    btn.textContent = on ? '✕' : '⛶';
-    btn.title = on ? '풀스크린 종료 (ESC)' : '풀스크린 (⌘⇧F)';
-  }
-  btn.addEventListener('click', toggle);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && layout.classList.contains('fullscreen')) toggle();
-  });
-})();
+// 하위 호환: 기존 호출부가 부르는 이름을 새 보드로 매핑
+function renderMinutes() {}
+function renderAgendaPanel() { renderAgendaBoard(); }
 
 /* ============================================================
  * 세미 노션
@@ -4330,52 +4060,7 @@ function renderAll() {
   updateFileCounts();
   renderContentSchedule();
   renderTasks();
-  renderMinutes();
-  renderAgendaPanel();
-}
-
-/* ============================================================
- * 설정 탭
- * ============================================================ */
-function renderSettingsTab() {
-  const tabsEl = document.querySelector('.tabs');
-  const container = $('#tabNameEditors');
-  if (!container || !tabsEl) return;
-
-  const saved = JSON.parse(localStorage.getItem('wpmt_tab_names') || '{}');
-  const SKIP = ['settings'];
-  const btns = [...tabsEl.querySelectorAll('button[data-tab]')]
-    .filter(b => !SKIP.includes(b.dataset.tab));
-
-  container.innerHTML = btns.map(b => {
-    const key = b.dataset.tab;
-    const current = saved[key] || b.textContent;
-    return `
-      <div style="display:flex;align-items:center;gap:10px;">
-        <label style="font-size:12px;color:var(--muted);width:80px;flex-shrink:0;">${key}</label>
-        <input data-tabkey="${key}" value="${escapeHtml(current)}"
-          style="flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;
-                 padding:7px 10px;color:var(--text);font-size:13px;font-family:inherit;" />
-      </div>`;
-  }).join('');
-
-  const saveBtn = $('#saveTabNamesBtn');
-  if (saveBtn) {
-    saveBtn.onclick = () => {
-      const names = {};
-      container.querySelectorAll('input[data-tabkey]').forEach(inp => {
-        const key = inp.dataset.tabkey;
-        const val = inp.value.trim();
-        if (val) {
-          names[key] = val;
-          const btn = tabsEl.querySelector(`button[data-tab="${key}"]`);
-          if (btn) btn.textContent = val;
-        }
-      });
-      localStorage.setItem('wpmt_tab_names', JSON.stringify(names));
-      toast('탭 이름 저장됨 ✓');
-    };
-  }
+  renderAgendaBoard();
 }
 
 /* ============================================================
