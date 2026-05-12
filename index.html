@@ -325,6 +325,10 @@
   }
   .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tabs button:hover { color: var(--text); }
+  .tabs button[draggable="true"] { cursor: grab; }
+  .tabs button[draggable="true"]:active { cursor: grabbing; }
+  .tabs button.tab-dragging { opacity: 0.4; }
+  .tabs button.tab-drag-over { box-shadow: inset 2px 0 0 var(--accent); }
 
   /* === 카테고리 사이드 === */
   .cats-row {
@@ -370,7 +374,7 @@
   /* === 카드 그리드 === */
   .grid {
     display: grid; gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   }
   .card {
     background: var(--panel); border: 1px solid var(--border);
@@ -2964,6 +2968,8 @@ async function loadTeamBoard() {
   if (banner) banner.style.display = 'none';
   teamItems = data || [];
   applyMemberNicks();
+  applyTabOrder();
+  initTabDragReorder();
 }
 
 function applyMemberNicks() {
@@ -2987,6 +2993,64 @@ async function saveMemberNick(memberName, newNick) {
   } else {
     await addTeamItem('config', { key: 'member_nicks', nicks: { [memberName]: trimmed } });
   }
+}
+
+function applyTabOrder() {
+  const tabsEl = document.querySelector('.tabs');
+  if (!tabsEl) return;
+  const cfg = teamItems.find(x => x.type === 'config' && x.data?.key === 'tab_order' && !x.data?.deleted);
+  if (!cfg?.data?.order) return;
+  cfg.data.order.forEach(tabId => {
+    const btn = tabsEl.querySelector(`button[data-tab="${tabId}"]`);
+    if (btn) tabsEl.appendChild(btn);
+  });
+}
+
+async function saveTabOrder() {
+  const tabsEl = document.querySelector('.tabs');
+  if (!tabsEl) return;
+  const order = [...tabsEl.querySelectorAll('button[data-tab]')].map(b => b.dataset.tab);
+  const cfg = teamItems.find(x => x.type === 'config' && x.data?.key === 'tab_order' && !x.data?.deleted);
+  if (cfg) {
+    await updateTeamItem(cfg.id, { ...cfg.data, order });
+  } else {
+    await addTeamItem('config', { key: 'tab_order', order });
+  }
+}
+
+function initTabDragReorder() {
+  const tabsEl = document.querySelector('.tabs');
+  if (!tabsEl || tabsEl.dataset.dragInit === '1') return;
+  tabsEl.dataset.dragInit = '1';
+  let dragSrc = null;
+  tabsEl.querySelectorAll('button[data-tab]').forEach(btn => {
+    btn.draggable = true;
+    btn.addEventListener('dragstart', e => {
+      dragSrc = btn;
+      btn.classList.add('tab-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    btn.addEventListener('dragend', async () => {
+      btn.classList.remove('tab-dragging');
+      tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('tab-drag-over'));
+      await saveTabOrder();
+    });
+    btn.addEventListener('dragover', e => {
+      if (!dragSrc || dragSrc === btn) return;
+      e.preventDefault();
+      tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('tab-drag-over'));
+      btn.classList.add('tab-drag-over');
+    });
+    btn.addEventListener('drop', e => {
+      if (!dragSrc || dragSrc === btn) return;
+      e.preventDefault();
+      const btns = [...tabsEl.querySelectorAll('button[data-tab]')];
+      const fromIdx = btns.indexOf(dragSrc);
+      const toIdx = btns.indexOf(btn);
+      if (fromIdx < toIdx) btn.after(dragSrc); else btn.before(dragSrc);
+      btn.classList.remove('tab-drag-over');
+    });
+  });
 }
 
 async function addTeamItem(type, itemData) {
@@ -3423,8 +3487,25 @@ function openContentModal(item, defaultDate) {
   const d = item ? item.data : {};
   const isEdit = !!item;
   const initCat = d.category || '콘텐츠';
+  const importableTasks = teamItems.filter(x =>
+    x.type === 'task' && !x.data?.deleted && x.data.status !== 'done'
+  ).sort((a, b) => (a.data.assignee || '').localeCompare(b.data.assignee || ''));
   openModal(`
     <h3>${isEdit ? '✏️ 일정 수정' : '📅 일정 추가'}</h3>
+    ${!isEdit && importableTasks.length > 0 ? `
+      <div class="input-row" style="background:rgba(245,166,35,0.05);border:1px dashed var(--accent);border-radius:8px;padding:10px;margin-bottom:12px;">
+        <label style="color:var(--accent);">📥 업무에서 가져오기</label>
+        <select id="c-import-task">
+          <option value="">— 직접 입력 —</option>
+          ${importableTasks.map(t => {
+            const mi = MEMBERS.findIndex(m => m.name === t.data.assignee);
+            const nick = mi >= 0 ? MEMBERS[mi].nick : (t.data.assignee || '');
+            const agendaIcon = t.data.is_agenda ? '💬 ' : '';
+            return `<option value="${t.id}" data-title="${escapeHtml(t.data.title)}" data-assignee="${escapeHtml(t.data.assignee||'')}" data-note="${escapeHtml(t.data.note||'')}">${agendaIcon}[${escapeHtml(nick)}] ${escapeHtml(t.data.title)}</option>`;
+          }).join('')}
+        </select>
+      </div>
+    ` : ''}
     <div class="input-row">
       <label>날짜</label>
       <input type="date" id="c-date" value="${d.date || defaultDate || fmtDate(new Date())}" />
@@ -3493,6 +3574,16 @@ function openContentModal(item, defaultDate) {
   $('#c-repeat').addEventListener('change', e => {
     $('#c-repeat-until-row').style.display = e.target.value === 'none' ? 'none' : '';
   });
+  let importedTaskId = null;
+  $('#c-import-task')?.addEventListener('change', e => {
+    const opt = e.target.selectedOptions[0];
+    if (!opt || !opt.value) { importedTaskId = null; return; }
+    importedTaskId = opt.value;
+    $('#c-topic').value = opt.dataset.title || '';
+    const assigneeSelect = $('#c-assignee');
+    if (assigneeSelect && opt.dataset.assignee) assigneeSelect.value = opt.dataset.assignee;
+    if (opt.dataset.note) $('#c-note').value = opt.dataset.note;
+  });
   let selectedCat = initCat;
   $$('#modal .cat-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3524,6 +3615,7 @@ function openContentModal(item, defaultDate) {
       status: $('#c-status').value, note: $('#c-note').value.trim(),
       repeat: repeatVal,
       repeat_until: repeatVal === 'none' ? null : ($('#c-repeat-until').value || null),
+      linked_task_id: importedTaskId || d.linked_task_id || null,
     };
     $('#c-save').disabled = true;
     if (isEdit) await updateTeamItem(item.id, itemData);
@@ -4313,13 +4405,35 @@ function openSharedInfoModal(item = null) {
 $('#addSharedInfoBtn')?.addEventListener('click', () => openSharedInfoModal());
 
 /* ============================================================
- * 노션 링크
+ * 노션 / 피그마 링크 — Supabase 동기화
  * ============================================================ */
 function getNotionLinks() {
-  try { return JSON.parse(localStorage.getItem('wpmt_notion_links') || '[]'); } catch { return []; }
+  return teamItems
+    .filter(x => x.type === 'notion_link' && !x.data?.deleted)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .map(x => ({ ...x.data, id: x.id }));
 }
-function saveNotionLinks(links) {
-  localStorage.setItem('wpmt_notion_links', JSON.stringify(links));
+
+async function migrateNotionLinksFromLocalStorage() {
+  const raw = localStorage.getItem('wpmt_notion_links');
+  if (!raw) return;
+  try {
+    const old = JSON.parse(raw);
+    if (!Array.isArray(old) || old.length === 0) {
+      localStorage.removeItem('wpmt_notion_links');
+      return;
+    }
+    const existing = teamItems.filter(x => x.type === 'notion_link');
+    if (existing.length > 0) {
+      localStorage.removeItem('wpmt_notion_links');
+      return;
+    }
+    for (const entry of old) await addTeamItem('notion_link', entry);
+    localStorage.removeItem('wpmt_notion_links');
+    toast(`노션/피그마 링크 ${old.length}개 클라우드로 이전됨 ✓`, 'success');
+  } catch {
+    /* ignore */
+  }
 }
 
 function renderNotionList() {
@@ -4329,41 +4443,37 @@ function renderNotionList() {
 
   function makeNotionCards(arr, emptyMsg) {
     if (arr.length === 0) return `<div class="notion-empty" style="grid-column:1/-1">${emptyMsg}</div>`;
-    return arr.map(item => {
-      const i = links.indexOf(item);
-      return `
-        <div class="notion-card" onclick="window.openNotionLink(${i})">
-          <div class="notion-card-icon">📒</div>
-          <div class="notion-card-body">
-            <div class="notion-card-title">${escapeHtml(item.title || item.url)}</div>
-            <div class="notion-card-url">${escapeHtml(item.url)}</div>
-            ${item.desc ? `<div class="notion-card-desc">${escapeHtml(item.desc)}</div>` : ''}
-          </div>
-          <div class="notion-card-actions">
-            <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink(${i})">✏️</button>
-            <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink(${i})">🗑</button>
-          </div>
-        </div>`;
-    }).join('');
+    return arr.map(item => `
+      <div class="notion-card" onclick="window.openNotionLink('${item.id}')">
+        <div class="notion-card-icon">📒</div>
+        <div class="notion-card-body">
+          <div class="notion-card-title">${escapeHtml(item.title || item.url)}</div>
+          <div class="notion-card-url">${escapeHtml(item.url)}</div>
+          ${item.desc ? `<div class="notion-card-desc">${escapeHtml(item.desc)}</div>` : ''}
+        </div>
+        <div class="notion-card-actions">
+          <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink('${item.id}')">✏️</button>
+          <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink('${item.id}')">🗑</button>
+        </div>
+      </div>`).join('');
   }
 
   function makeFigmaCards(arr, emptyMsg) {
     if (arr.length === 0) return `<div class="notion-empty" style="grid-column:1/-1">${emptyMsg}</div>`;
     return arr.map(item => {
-      const i = links.indexOf(item);
       const thumbHtml = item.thumb
         ? `<img class="figma-card-thumb" src="${escapeHtml(item.thumb)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="figma-card-thumb-placeholder" style="display:none;">🎨</div>`
         : `<div class="figma-card-thumb-placeholder">🎨</div>`;
       return `
-        <div class="figma-card" onclick="window.openNotionLink(${i})">
+        <div class="figma-card" onclick="window.openNotionLink('${item.id}')">
           ${thumbHtml}
           <div class="figma-card-body">
             <div class="figma-card-title">${escapeHtml(item.title || item.url)}</div>
             <div class="figma-card-url">${escapeHtml(item.url)}</div>
           </div>
           <div class="figma-card-actions">
-            <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink(${i})">✏️</button>
-            <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink(${i})">🗑</button>
+            <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink('${item.id}')">✏️</button>
+            <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink('${item.id}')">🗑</button>
           </div>
         </div>`;
     }).join('');
@@ -4389,29 +4499,30 @@ async function fetchOgMeta(url) {
   } catch { return null; }
 }
 
-function openNotionModal(idx = -1, defaultCategory = 'notion') {
+function openNotionModal(editId = null, defaultCategory = 'notion') {
   const links = getNotionLinks();
-  const item = idx >= 0 ? links[idx] : { title: '', url: '', desc: '', thumb: '', category: defaultCategory };
-  const isEdit = idx >= 0;
+  const item = editId ? links.find(l => l.id === editId) : null;
+  const isEdit = !!item;
+  const base = item || { title: '', url: '', desc: '', thumb: '', category: defaultCategory };
   const catLabel = { notion: '📒 Notion', figma: '🎨 Figma' };
 
   openModal(`
     <h3 style="margin:0 0 16px;font-size:16px;">${isEdit ? '✏️ 링크 수정' : '+ 링크 추가'}</h3>
     <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="cat-chip ${(item.category||'notion')==='notion'?'active':''}" id="nl-cat-notion" data-cat="notion">📒 Notion</button>
-      <button class="cat-chip ${item.category==='figma'?'active':''}" id="nl-cat-figma" data-cat="figma">🎨 Figma</button>
+      <button class="cat-chip ${(base.category||'notion')==='notion'?'active':''}" id="nl-cat-notion" data-cat="notion">📒 Notion</button>
+      <button class="cat-chip ${base.category==='figma'?'active':''}" id="nl-cat-figma" data-cat="figma">🎨 Figma</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input id="nl-url" class="input" placeholder="URL 붙여넣기…" value="${escapeHtml(item.url)}" style="flex:1;" />
+      <input id="nl-url" class="input" placeholder="URL 붙여넣기…" value="${escapeHtml(base.url)}" style="flex:1;" />
       <button class="btn" id="nl-fetch" style="white-space:nowrap;padding:0 14px;">자동 인식</button>
     </div>
-    <div id="nl-preview" style="display:${item.thumb?'flex':'none'};align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px;">
-      <img id="nl-thumb-img" src="${escapeHtml(item.thumb||'')}" style="width:56px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;" />
-      <div style="flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="nl-preview-title">${escapeHtml(item.title||'')}</div>
+    <div id="nl-preview" style="display:${base.thumb?'flex':'none'};align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px;">
+      <img id="nl-thumb-img" src="${escapeHtml(base.thumb||'')}" style="width:56px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;" />
+      <div style="flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="nl-preview-title">${escapeHtml(base.title||'')}</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
-      <input id="nl-title" class="input" placeholder="제목 (비워두면 자동 인식)" value="${escapeHtml(item.title||'')}" />
-      <input id="nl-desc" class="input" placeholder="메모 (선택)" value="${escapeHtml(item.desc||'')}" />
+      <input id="nl-title" class="input" placeholder="제목 (비워두면 자동 인식)" value="${escapeHtml(base.title||'')}" />
+      <input id="nl-desc" class="input" placeholder="메모 (선택)" value="${escapeHtml(base.desc||'')}" />
     </div>
     <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
       <button class="btn ghost" data-close>취소</button>
@@ -4419,8 +4530,8 @@ function openNotionModal(idx = -1, defaultCategory = 'notion') {
     </div>
   `);
 
-  let selectedCat = item.category || defaultCategory;
-  let thumbUrl = item.thumb || '';
+  let selectedCat = base.category || defaultCategory;
+  let thumbUrl = base.thumb || '';
 
   $$('#modal [data-cat]').forEach(btn => btn.addEventListener('click', () => {
     $$('#modal [data-cat]').forEach(b => b.classList.remove('active'));
@@ -4457,29 +4568,29 @@ function openNotionModal(idx = -1, defaultCategory = 'notion') {
   urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchBtn.click(); });
 
   $('[data-close]').addEventListener('click', closeModal);
-  $('#nlSaveBtn').addEventListener('click', () => {
+  $('#nlSaveBtn').addEventListener('click', async () => {
     const url = urlInput.value.trim();
     const title = $('#nl-title').value.trim();
     const desc = $('#nl-desc').value.trim();
     if (!url) { toast('URL을 입력해주세요', 'error'); return; }
-    const allLinks = getNotionLinks();
+    $('#nlSaveBtn').disabled = true;
     const entry = { title: title || url, url, desc, thumb: thumbUrl, category: selectedCat };
-    if (isEdit) allLinks[idx] = entry;
-    else allLinks.unshift(entry);
-    saveNotionLinks(allLinks);
+    if (isEdit) await updateTeamItem(editId, entry);
+    else await addTeamItem('notion_link', entry);
     closeModal();
     renderNotionList();
     toast(isEdit ? '수정됨' : '추가됨', 'success');
   });
 }
 
-window.openNotionLink = (i) => { const l = getNotionLinks()[i]; if (l) window.open(l.url, '_blank'); };
-window.editNotionLink  = (i) => openNotionModal(i);
-window.deleteNotionLink = (i) => {
+window.openNotionLink = (id) => {
+  const l = getNotionLinks().find(x => x.id === id);
+  if (l) window.open(l.url, '_blank');
+};
+window.editNotionLink = (id) => openNotionModal(id);
+window.deleteNotionLink = async (id) => {
   if (!confirm('삭제할까요?')) return;
-  const links = getNotionLinks();
-  links.splice(i, 1);
-  saveNotionLinks(links);
+  await deleteTeamItem(id);
   renderNotionList();
   toast('삭제됨');
 };
