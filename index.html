@@ -2970,6 +2970,7 @@ async function loadTeamBoard() {
   applyMemberNicks();
   applyTabOrder();
   initTabDragReorder();
+  await migrateNotionLinksFromLocalStorage();
 }
 
 function applyMemberNicks() {
