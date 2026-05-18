@@ -656,6 +656,7 @@
     min-height: 120px; display: flex; flex-direction: column; gap: 8px;
   }
   .day-col.today { border-color: var(--accent); }
+  .day-col.drag-over { border-color: var(--accent); background: rgba(245,166,35,0.06); }
   .day-header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
   .day-name { font-size: 11px; color: var(--muted); font-weight: 600; }
   .day-date { font-size: 14px; font-weight: 700; }
@@ -666,6 +667,9 @@
     cursor: pointer; transition: border-color 0.1s; display: flex; flex-direction: column; gap: 4px;
   }
   .content-card:hover { border-color: var(--accent); }
+  .content-card[draggable="true"] { cursor: grab; }
+  .content-card[draggable="true"]:active { cursor: grabbing; }
+  .content-card.dragging { opacity: 0.4; }
   .c-format { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; align-self: flex-start; }
   .c-format.reels { background: rgba(255,107,107,0.2); color: var(--accent-2); }
   .c-format.feed { background: rgba(245,166,35,0.2); color: var(--accent); }
@@ -692,6 +696,55 @@
   .dot-0 { background: #f5a623; }
   .dot-1 { background: #ff6b6b; }
   .dot-2 { background: #b07cff; }
+
+  /* ===== 레인톡 광고소재 ===== */
+  .rt-month-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin: 0 0 14px;
+  }
+  .rt-month-label {
+    font-size: 18px; font-weight: 700; min-width: 140px; text-align: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .rt-summary {
+    display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px;
+  }
+  .rt-summary-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 14px; font-size: 13px;
+  }
+  .rt-summary-chip strong { font-size: 15px; }
+  .rt-week-group {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 12px;
+  }
+  .rt-week-label {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.3px;
+    padding: 4px 0 2px; border-bottom: 1px dashed var(--border);
+    margin-bottom: 2px;
+  }
+  .rt-fb-thread {
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 280px; overflow-y: auto;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px;
+  }
+  .rt-fb-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .rt-fb-text {
+    font-size: 13px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .rt-fb-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 6px; font-size: 11px; color: var(--muted);
+  }
 
   /* 마감일 탭 */
   .due-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1283,6 +1336,7 @@
     <!-- 탭 -->
     <div class="tabs">
       <button data-tab="tasks" class="active">✅ 업무</button>
+      <button data-tab="raintalk">📢 레인톡</button>
       <button data-tab="schedule">📅 스케줄</button>
       <button data-tab="minutes">📋 회의록</button>
       <button data-tab="seminotion" style="display:none;">📝 세미 노션</button>
@@ -1318,6 +1372,20 @@
         ⚠️ Supabase 테이블이 없습니다. <b>wpmt_team_board</b> SQL을 먼저 실행해주세요.
       </div>
       <div class="task-board" id="taskBoard"></div>
+    </section>
+
+    <!-- 레인톡 광고소재 뷰 -->
+    <section id="raintalkView" style="display:none">
+      <div class="section-header">
+        <h2>📢 레인톡 광고소재</h2>
+      </div>
+      <div class="rt-month-bar">
+        <button class="nav-btn" id="rtPrevMonthBtn">← 이전달</button>
+        <div class="rt-month-label" id="rtMonthLabel"></div>
+        <button class="nav-btn" id="rtNextMonthBtn">다음달 →</button>
+      </div>
+      <div class="rt-summary" id="rtSummary"></div>
+      <div class="task-board" id="raintalkBoard"></div>
     </section>
 
     <!-- 회의록 뷰 — 멤버별 어젠다 보드 -->
@@ -1536,6 +1604,8 @@ let activeSubTab = 'bookmarks';
 
 let teamItems = [];
 let scheduleWeekOffset = 0;
+let raintalkMonthOffset = 0; // 0 = 이번달, -1 = 지난달
+const expandedRaintalkDone = {}; // 멤버별 완료 섹션 펼침 상태
 
 const MEMBERS = [
   { name: '이태호', nick: '타이거미어캣' },
@@ -2820,6 +2890,7 @@ function switchTab(tab) {
   activeTab = tab;
   $('#scheduleView').style.display      = tab === 'schedule'    ? 'block' : 'none';
   $('#tasksView').style.display         = tab === 'tasks'       ? 'block' : 'none';
+  $('#raintalkView').style.display      = tab === 'raintalk'    ? 'block' : 'none';
   $('#minutesView').style.display       = tab === 'minutes'     ? 'block' : 'none';
   $('#seminotionView').style.display    = tab === 'seminotion'  ? 'block' : 'none';
   $('#referenceView').style.display     = tab === 'reference'   ? 'block' : 'none';
@@ -2831,6 +2902,7 @@ function switchTab(tab) {
   $('#sharedinfoView').style.display    = tab === 'sharedinfo'  ? 'block' : 'none';
   if (tab === 'schedule')    renderContentSchedule();
   if (tab === 'tasks')       renderTasks();
+  if (tab === 'raintalk')    renderRaintalk();
   if (tab === 'minutes')     renderAgendaBoard();
   if (tab === 'seminotion')  renderNoteList();
   if (tab === 'notion')      renderNotionList();
@@ -2845,6 +2917,9 @@ $$('.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.da
 $('#prevWeekBtn').addEventListener('click', () => { scheduleWeekOffset--; renderContentSchedule(); });
 $('#nextWeekBtn').addEventListener('click', () => { scheduleWeekOffset++; renderContentSchedule(); });
 $('#addContentBtn').addEventListener('click', () => openContentModal(null, fmtDate(new Date())));
+
+$('#rtPrevMonthBtn').addEventListener('click', () => { raintalkMonthOffset--; renderRaintalk(); });
+$('#rtNextMonthBtn').addEventListener('click', () => { raintalkMonthOffset++; renderRaintalk(); });
 
 document.addEventListener('click', (e) => {
   const ftBtn = e.target.closest('[data-ft]');
@@ -3346,6 +3421,348 @@ function openTaskModal(item, defaultMember, opts) {
 }
 
 /* ============================================================
+ * 레인톡 광고소재 보드
+ * ============================================================ */
+function rtMondayOf(d) {
+  const dt = new Date(d);
+  const dow = dt.getDay();
+  dt.setDate(dt.getDate() - (dow === 0 ? 6 : dow - 1));
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+function rtCurrentMonday() { return rtMondayOf(new Date()); }
+function rtMonthFromOffset(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function rtFmtMonth(d) { return `${d.getFullYear()}년 ${d.getMonth()+1}월`; }
+function rtMonthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function rtFmtWeekRange(mondayStr) {
+  const mon = new Date(mondayStr);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const f = (x) => `${x.getMonth()+1}/${x.getDate()}`;
+  return `${f(mon)} ~ ${f(sun)}`;
+}
+function rtWeekMonthKey(mondayStr) {
+  const mon = new Date(mondayStr);
+  return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}`;
+}
+
+function raintalkCardHtml(t, isDone) {
+  const d = t.data;
+  const fbCount = Array.isArray(d.feedbacks) ? d.feedbacks.length : 0;
+  const completeOrRestoreBtn = isDone
+    ? `<button class="icon-btn" data-act="rt-restore" data-id="${t.id}" title="다시 할일로" style="padding:3px 8px;font-size:11px;color:var(--accent);">↩</button>`
+    : `<button class="icon-btn" data-act="rt-complete" data-id="${t.id}" title="완료 처리" style="padding:3px 8px;font-size:11px;color:var(--success,#4ade80);">✓</button>`;
+  return `
+    <div class="task-card ${isDone?'is-done':''}" data-act="rt-open" data-id="${t.id}" style="cursor:pointer;">
+      <div class="task-title" style="${isDone?'text-decoration:line-through;color:var(--muted);':''}">${escapeHtml(d.title)}</div>
+      <div class="task-meta">
+        <span class="status-badge ${d.status}">${STATUS_LABEL[d.status] || d.status}</span>
+        ${fbCount ? `<span class="task-due">💬 ${fbCount}</span>` : ''}
+      </div>
+      <div class="card-actions">
+        ${completeOrRestoreBtn}
+        <button class="icon-btn" data-act="rt-edit" data-id="${t.id}" style="padding:3px 8px;font-size:11px;">✏️</button>
+        <button class="icon-btn" data-act="rt-del" data-id="${t.id}" style="padding:3px 8px;font-size:11px;color:var(--danger);">×</button>
+      </div>
+    </div>`;
+}
+
+function renderRaintalk() {
+  const board = $('#raintalkBoard');
+  if (!board) return;
+
+  const month = rtMonthFromOffset(raintalkMonthOffset);
+  const monthKey = rtMonthKey(month);
+  $('#rtMonthLabel').textContent = rtFmtMonth(month);
+
+  const all = teamItems.filter(x => x.type === 'raintalk' && !x.data?.deleted);
+  const inMonth = all.filter(x => rtWeekMonthKey(x.data.week) === monthKey);
+
+  // 멤버별 요약 칩
+  $('#rtSummary').innerHTML = MEMBERS.map((m, mi) => {
+    const mine = inMonth.filter(x => x.data.assignee === m.name);
+    const done = mine.filter(x => x.data.status === 'done').length;
+    return `
+      <div class="rt-summary-chip">
+        <span class="member-dot dot-${mi}"></span>
+        <span>${escapeHtml(m.nick)}</span>
+        <strong>${done}<span style="color:var(--muted);font-weight:500;"> / ${mine.length}</span></strong>
+      </div>`;
+  }).join('');
+
+  // 보드 (멤버별 컬럼)
+  board.innerHTML = MEMBERS.map((m, mi) => {
+    const mine = inMonth.filter(x => x.data.assignee === m.name);
+    const active = mine.filter(x => x.data.status !== 'done');
+    const done = mine.filter(x => x.data.status === 'done');
+    const isExpanded = expandedRaintalkDone[m.name];
+
+    // 주차 그룹화 (최신 주가 위)
+    const groupByWeek = (list) => {
+      const map = {};
+      list.forEach(t => {
+        const k = t.data.week || '0000-00-00';
+        if (!map[k]) map[k] = [];
+        map[k].push(t);
+      });
+      return Object.keys(map).sort((a,b) => b.localeCompare(a)).map(k => ({ week: k, items: map[k] }));
+    };
+
+    const todayMonday = fmtDate(rtCurrentMonday());
+    const renderGroups = (groups, doneFlag) => groups.map(g => {
+      const label = g.week === todayMonday ? '이번 주' : rtFmtWeekRange(g.week);
+      return `
+        <div class="rt-week-group">
+          <div class="rt-week-label">${label}</div>
+          ${g.items.map(t => raintalkCardHtml(t, doneFlag)).join('')}
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="task-col">
+        <div class="task-col-header">
+          <div class="task-col-title">
+            <span class="member-dot dot-${mi}"></span>
+            <span>${escapeHtml(m.nick)}</span>
+          </div>
+          <span style="font-size:11px;color:var(--muted);">${active.length}개${done.length>0?` · ✓ ${done.length}`:''}</span>
+        </div>
+        ${active.length ? renderGroups(groupByWeek(active), false) : '<div style="color:var(--muted);font-size:12px;padding:4px 0;">광고소재 없음</div>'}
+        <button class="add-task-btn" data-act="rt-add" data-member="${m.name}">+ 광고소재 추가</button>
+        ${done.length > 0 ? `
+          <button class="done-toggle-btn" data-act="rt-toggle-done" data-member="${m.name}" style="margin-top:10px;width:100%;padding:6px 10px;border-radius:7px;background:var(--panel-2);border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <span>✓ 완료 (${done.length})</span>
+            <span>${isExpanded?'▲':'▼'}</span>
+          </button>
+          <div style="margin-top:6px;display:${isExpanded?'block':'none'};">
+            ${renderGroups(groupByWeek(done), true)}
+          </div>
+        ` : ''}
+      </div>`;
+  }).join('');
+
+  wireRaintalkEvents();
+}
+
+function wireRaintalkEvents() {
+  $$('[data-act="rt-add"]').forEach(btn =>
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openRaintalkModal(null, btn.dataset.member); })
+  );
+  $$('[data-act="rt-edit"]').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (item) openRaintalkModal(item);
+    })
+  );
+  $$('[data-act="rt-open"]').forEach(card =>
+    card.addEventListener('click', e => {
+      if (e.target.closest('.card-actions')) return;
+      const item = teamItems.find(x => x.id === card.dataset.id);
+      if (item) openRaintalkModal(item);
+    })
+  );
+  $$('[data-act="rt-del"]').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm('삭제할까요?')) return;
+      await deleteTeamItem(btn.dataset.id);
+      renderRaintalk();
+      toast('삭제됨');
+    })
+  );
+  $$('[data-act="rt-complete"]').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (!item) return;
+      btn.disabled = true;
+      expandedRaintalkDone[item.data.assignee] = true;
+      await updateTeamItem(item.id, { ...item.data, status: 'done', completed_at: new Date().toISOString() });
+      renderRaintalk();
+      toast('완료 처리됨 ✓', 'success');
+    })
+  );
+  $$('[data-act="rt-restore"]').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const item = teamItems.find(x => x.id === btn.dataset.id);
+      if (!item) return;
+      btn.disabled = true;
+      await updateTeamItem(item.id, { ...item.data, status: 'todo', completed_at: null });
+      renderRaintalk();
+      toast('할 일로 복원됨 ↩', 'success');
+    })
+  );
+  $$('[data-act="rt-toggle-done"]').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const member = btn.dataset.member;
+      expandedRaintalkDone[member] = !expandedRaintalkDone[member];
+      renderRaintalk();
+    })
+  );
+}
+
+function openRaintalkModal(item, defaultMember) {
+  const d = item ? item.data : {};
+  const isEdit = !!item;
+  const feedbacks = Array.isArray(d.feedbacks) ? d.feedbacks : [];
+  const defaultWeek = d.week || fmtDate(rtCurrentMonday());
+
+  const fbHtml = feedbacks.length
+    ? feedbacks.map(f => `
+        <div class="rt-fb-item" data-fbid="${f.id}">
+          <div class="rt-fb-text">${escapeHtml(f.text)}</div>
+          <div class="rt-fb-meta">
+            <span>${new Date(f.ts).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span>
+            <button class="icon-btn" data-act="rt-fb-del" data-fbid="${f.id}" style="padding:2px 6px;font-size:10px;color:var(--danger);">×</button>
+          </div>
+        </div>`).join('')
+    : `<div style="color:var(--muted);font-size:12px;padding:6px 0;">아직 피드백 없음</div>`;
+
+  openModal(`
+    <h3>${isEdit ? '✏️ 광고소재 수정' : '📢 광고소재 추가'}</h3>
+    <div class="input-row">
+      <label>담당자</label>
+      <select id="rt-assignee">
+        ${MEMBERS.map(m => `<option value="${m.name}" ${(d.assignee||defaultMember)===m.name?'selected':''}>${m.nick} (${m.name})</option>`).join('')}
+      </select>
+    </div>
+    <div class="input-row">
+      <label>광고소재 제목</label>
+      <input id="rt-title" placeholder="예: 5월 4째주 광고소재 A안" value="${escapeHtml(d.title||'')}" />
+    </div>
+    <div class="input-row">
+      <label>주차 (월요일 기준)</label>
+      <div class="due-tabs" style="margin-bottom:8px;">
+        <button type="button" class="due-tab" data-rt-week="this">이번 주</button>
+        <button type="button" class="due-tab" data-rt-week="next">다음 주</button>
+        <button type="button" class="due-tab" data-rt-week="prev">지난 주</button>
+        <button type="button" class="due-tab active" data-rt-week="custom">직접 선택</button>
+      </div>
+      <input type="date" id="rt-week" value="${defaultWeek}" />
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="rt-week-hint"></div>
+    </div>
+    <div class="input-row">
+      <label>상태</label>
+      <select id="rt-status">
+        <option value="todo" ${(d.status||'todo')==='todo'?'selected':''}>할 일</option>
+        <option value="done" ${d.status==='done'?'selected':''}>완료</option>
+      </select>
+    </div>
+    ${isEdit ? `
+    <div class="input-row">
+      <label>피드백 (${feedbacks.length}개)</label>
+      <div class="rt-fb-thread" id="rt-fb-thread">${fbHtml}</div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <textarea id="rt-fb-input" placeholder="새 피드백/노트 작성..." style="flex:1;min-height:60px;"></textarea>
+        <button class="btn" type="button" id="rt-fb-add" style="align-self:flex-end;">+ 추가</button>
+      </div>
+    </div>
+    ` : ''}
+    <div class="modal-actions">
+      <button class="btn ghost" data-close>취소</button>
+      <button class="btn" id="rt-save">${isEdit ? '저장' : '추가'}</button>
+    </div>
+  `);
+  $('[data-close]').addEventListener('click', closeModal);
+
+  const updateWeekHint = () => {
+    const v = $('#rt-week').value;
+    if (!v) { $('#rt-week-hint').textContent = ''; return; }
+    const snapped = fmtDate(rtMondayOf(v));
+    if (snapped !== v) {
+      $('#rt-week').value = snapped;
+      $('#rt-week-hint').textContent = `→ ${snapped} (월요일로 보정됨) · ${rtFmtWeekRange(snapped)}`;
+    } else {
+      $('#rt-week-hint').textContent = rtFmtWeekRange(snapped);
+    }
+  };
+  updateWeekHint();
+  $('#rt-week').addEventListener('change', updateWeekHint);
+
+  $$('#modal [data-rt-week]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#modal [data-rt-week]').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      const tag = btn.dataset.rtWeek;
+      if (tag === 'custom') return;
+      const base = rtCurrentMonday();
+      if (tag === 'next') base.setDate(base.getDate() + 7);
+      if (tag === 'prev') base.setDate(base.getDate() - 7);
+      $('#rt-week').value = fmtDate(base);
+      updateWeekHint();
+    });
+  });
+
+  // 피드백 스레드 (수정 시만)
+  let workingFeedbacks = [...feedbacks];
+  const renderThread = () => {
+    const el = $('#rt-fb-thread');
+    if (!el) return;
+    el.innerHTML = workingFeedbacks.length
+      ? workingFeedbacks.map(f => `
+          <div class="rt-fb-item" data-fbid="${f.id}">
+            <div class="rt-fb-text">${escapeHtml(f.text)}</div>
+            <div class="rt-fb-meta">
+              <span>${new Date(f.ts).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span>
+              <button class="icon-btn" data-act="rt-fb-del" data-fbid="${f.id}" style="padding:2px 6px;font-size:10px;color:var(--danger);">×</button>
+            </div>
+          </div>`).join('')
+      : `<div style="color:var(--muted);font-size:12px;padding:6px 0;">아직 피드백 없음</div>`;
+    el.querySelectorAll('[data-act="rt-fb-del"]').forEach(b => {
+      b.addEventListener('click', () => {
+        workingFeedbacks = workingFeedbacks.filter(f => f.id !== b.dataset.fbid);
+        renderThread();
+      });
+    });
+  };
+  renderThread();
+
+  if (isEdit) {
+    $('#rt-fb-add').addEventListener('click', () => {
+      const txt = $('#rt-fb-input').value.trim();
+      if (!txt) return;
+      workingFeedbacks.push({ id: uid(), text: txt, ts: new Date().toISOString() });
+      $('#rt-fb-input').value = '';
+      renderThread();
+    });
+  }
+
+  $('#rt-save').addEventListener('click', async () => {
+    const title = $('#rt-title').value.trim();
+    if (!title) { toast('제목을 입력하세요', 'error'); return; }
+    const week = $('#rt-week').value;
+    if (!week) { toast('주차를 선택하세요', 'error'); return; }
+    const status = $('#rt-status').value;
+    const prevStatus = d.status || 'todo';
+    const itemData = {
+      title,
+      assignee: $('#rt-assignee').value,
+      status,
+      week: fmtDate(rtMondayOf(week)),
+      feedbacks: isEdit ? workingFeedbacks : [],
+      completed_at: status === 'done'
+        ? (prevStatus === 'done' && d.completed_at ? d.completed_at : new Date().toISOString())
+        : null,
+    };
+    $('#rt-save').disabled = true;
+    if (isEdit) await updateTeamItem(item.id, itemData);
+    else await addTeamItem('raintalk', itemData);
+    closeModal();
+    renderRaintalk();
+    toast(isEdit ? '수정됨!' : '추가됨!', 'success');
+  });
+}
+
+/* ============================================================
  * 콘텐츠 스케줄 렌더
  * ============================================================ */
 function getWeekDates(offset) {
@@ -3410,7 +3827,7 @@ function scheduleCardHtml(item) {
   const statusKey = cd.status || 'planning';
   const repeatBadge = (cd.repeat && cd.repeat !== 'none') ? `<span class="c-repeat" title="${REPEAT_LABEL[cd.repeat]||''}">🔁</span>` : '';
   return `
-    <div class="content-card" data-id="${item.id}">
+    <div class="content-card" data-id="${item.id}" draggable="true">
       <span class="c-format ${fmtCls}">${escapeHtml(fmtLabel)}</span>
       <div class="c-topic">${repeatBadge}${escapeHtml(cd.topic)}</div>
       <div class="c-bottom">
@@ -3425,7 +3842,7 @@ function taskScheduleCardHtml(item) {
   const mi = MEMBERS.findIndex(m => m.name === td.assignee);
   const st = td.status || 'todo';
   return `
-    <div class="content-card" data-taskid="${item.id}" style="border-left:3px solid ${['#f5a623','#ff6b6b','#b07cff'][mi]||'#8b93a7'}">
+    <div class="content-card" data-taskid="${item.id}" draggable="true" style="border-left:3px solid ${['#f5a623','#ff6b6b','#b07cff'][mi]||'#8b93a7'}">
       <span class="c-format task">✅ 업무</span>
       <div class="c-topic">${escapeHtml(td.title)}</div>
       <div class="c-bottom">
@@ -3454,7 +3871,7 @@ function renderContentSchedule() {
       ...dayTasks.map(t => taskScheduleCardHtml(t))
     ].join('');
     return `
-      <div class="day-col ${dateStr===todayStr?'today':''}">
+      <div class="day-col ${dateStr===todayStr?'today':''}" data-date="${dateStr}">
         <div class="day-header">
           <div class="day-name">${DAY_NAMES[di % 7]}</div>
           <div class="day-date">${d.getDate()}</div>
@@ -3482,6 +3899,55 @@ function wireScheduleEvents() {
       if (item) openTaskModal(item);
     })
   );
+
+  // 드래그해서 다른 요일로 이동
+  let dragId = null, dragKind = null;
+  $$('.content-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragId = card.dataset.id || card.dataset.taskid;
+      dragKind = card.dataset.id ? 'content' : 'task';
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox는 setData가 있어야 드래그가 시작됨
+      try { e.dataTransfer.setData('text/plain', dragId); } catch (_) {}
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      $$('.day-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+      dragId = null; dragKind = null;
+    });
+  });
+  $$('.day-col').forEach(col => {
+    col.addEventListener('dragover', e => {
+      if (!dragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drag-over');
+    });
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+    });
+    col.addEventListener('drop', async e => {
+      if (!dragId) return;
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      const newDate = col.dataset.date;
+      const id = dragId, kind = dragKind;
+      const item = teamItems.find(x => x.id === id);
+      if (!item || !newDate) return;
+      const field = kind === 'task' ? 'due' : 'date';
+      if (item.data[field] === newDate) return;
+      if (kind === 'content' && item.data.repeat && item.data.repeat !== 'none') {
+        if (!confirm('반복 일정의 기준일을 변경하면 이후 모든 반복도 함께 이동합니다. 계속할까요?')) return;
+      }
+      const newData = { ...item.data, [field]: newDate };
+      const ok = await updateTeamItem(id, newData);
+      if (ok) {
+        renderContentSchedule();
+        toast('이동됨!', 'success');
+      }
+    });
+  });
 }
 
 function openContentModal(item, defaultDate) {
@@ -4099,7 +4565,7 @@ function renderTrash() {
     el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-size:14px;">🗑 휴지통이 비어있어요</div>`;
     return;
   }
-  const typeLabel = { note: '📝 노트', minute: '📋 회의록', task: '✅ 업무', content: '📅 스케줄' };
+  const typeLabel = { note: '📝 노트', minute: '📋 회의록', task: '✅ 업무', content: '📅 스케줄', raintalk: '📢 레인톡' };
   el.innerHTML = trashed.map(item => {
     const d = item.data;
     const daysLeft = Math.max(0, Math.ceil((new Date(d.deleted_at).getTime() + 7*24*60*60*1000 - Date.now()) / (24*60*60*1000)));
