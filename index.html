@@ -697,6 +697,34 @@
   .dot-1 { background: #ff6b6b; }
   .dot-2 { background: #b07cff; }
 
+  /* ===== 파일보관함 핀 링크 ===== */
+  .pinned-drive {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(245,166,35,0.12), rgba(255,107,107,0.08));
+    border: 1px solid rgba(245,166,35,0.4);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .pinned-drive:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 20px rgba(245,166,35,0.15);
+    transform: translateY(-1px);
+  }
+  .pinned-drive-icon { font-size: 24px; flex-shrink: 0; }
+  .pinned-drive-body { flex: 1; min-width: 0; }
+  .pinned-drive-title { font-size: 14px; font-weight: 700; }
+  .pinned-drive-url {
+    font-size: 11px; color: var(--muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pinned-drive-cta {
+    font-size: 13px; color: var(--accent); font-weight: 600; flex-shrink: 0;
+  }
+
   /* ===== 레인톡 광고소재 ===== */
   .rt-month-bar {
     display: flex; align-items: center; justify-content: center;
@@ -1417,6 +1445,14 @@
           <button class="icon-btn" id="refreshFilesBtn">↻ 새로고침</button>
         </div>
       </div>
+      <a class="pinned-drive" href="https://drive.google.com/drive/folders/1M4i_CzGVfj7wbjrTCcj8mm1ar8zAVESL" target="_blank" rel="noopener">
+        <div class="pinned-drive-icon">📌</div>
+        <div class="pinned-drive-body">
+          <div class="pinned-drive-title">메인 드라이브 폴더</div>
+          <div class="pinned-drive-url">drive.google.com/drive/folders/1M4i_CzGVfj7wbjrTCcj8mm1ar8zAVESL</div>
+        </div>
+        <div class="pinned-drive-cta">열기 →</div>
+      </a>
       <div class="drop" id="dropZone" style="margin-bottom:14px;">
         <div class="ico">⬆️</div>
         <div class="label">드래그하거나 클릭하여 업로드</div>
@@ -3529,7 +3565,8 @@ function renderRaintalk() {
         <div class="task-col-header">
           <div class="task-col-title">
             <span class="member-dot dot-${mi}"></span>
-            <span>${escapeHtml(m.nick)}</span>
+            <span class="member-nick" contenteditable="true" spellcheck="false" data-member="${escapeHtml(m.name)}" data-rt-nick="1">${escapeHtml(m.nick)}</span>
+            <span class="member-nick-edit" title="이름 클릭해서 수정">✏️</span>
           </div>
           <span style="font-size:11px;color:var(--muted);">${active.length}개${done.length>0?` · ✓ ${done.length}`:''}</span>
         </div>
@@ -3608,6 +3645,28 @@ function wireRaintalkEvents() {
       renderRaintalk();
     })
   );
+  $$('[data-rt-nick="1"]').forEach(el => {
+    el.addEventListener('click', e => e.stopPropagation());
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') {
+        const m = MEMBERS.find(x => x.name === el.dataset.member);
+        if (m) el.textContent = m.nick;
+        el.blur();
+      }
+    });
+    el.addEventListener('blur', async () => {
+      const newNick = el.textContent.trim();
+      const m = MEMBERS.find(x => x.name === el.dataset.member);
+      if (!m) return;
+      if (!newNick) { el.textContent = m.nick; return; }
+      if (newNick === m.nick) return;
+      await saveMemberNick(el.dataset.member, newNick);
+      renderRaintalk();
+      if (activeTab === 'tasks') renderTasks();
+      toast('이름 변경됨 ✓', 'success');
+    });
+  });
 }
 
 function openRaintalkModal(item, defaultMember) {
