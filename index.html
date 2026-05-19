@@ -119,19 +119,115 @@
     padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--border);
   }
   .notion-col-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-  .notion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .notion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .figma-grid  { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .notion-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
     overflow: hidden; cursor: pointer; position: relative;
-    transition: border-color 0.15s, box-shadow 0.15s; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    transition: transform 0.18s ease, border-color 0.18s, box-shadow 0.18s;
+    display: flex; flex-direction: column;
   }
-  .notion-card:hover { border-color: rgba(245,166,35,0.5); box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
-  .notion-card-icon { font-size: 18px; flex-shrink: 0; }
-  .notion-card-body { min-width: 0; flex: 1; }
-  .notion-card-title { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .notion-card-url { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .notion-card-desc { font-size: 10px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notion-card:hover {
+    border-color: rgba(245,166,35,0.6);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+    transform: translateY(-2px);
+  }
+  .notion-card-cover {
+    aspect-ratio: 16/9; background: linear-gradient(135deg, #2a1f4a, #1a2a4a 60%, #3a2a5a);
+    position: relative; overflow: hidden;
+  }
+  .notion-card-cover img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .notion-card-cover-placeholder {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px; opacity: 0.6;
+  }
+  .notion-card-cover-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(13,15,20,0.78); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 4px 10px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .notion-card-body {
+    padding: 12px 14px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .notion-card-title {
+    font-size: 14px; font-weight: 700; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; word-break: break-word;
+  }
+  .notion-card-url {
+    font-size: 11px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .notion-card-desc {
+    font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* 노션 페이지 미리보기 모달 */
+  .nl-preview-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.78); backdrop-filter: blur(6px);
+    display: flex; flex-direction: column;
+  }
+  .nl-preview-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .nl-preview-title { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nl-preview-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .nl-preview-frame { flex: 1; width: 100%; border: 0; background: #fff; }
+  .nl-preview-fallback {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    color: var(--muted); text-align: center; padding: 30px;
+  }
+  /* 노션 링크 추가/수정 모달 */
+  .nl-cat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0 14px; }
+  .nl-cat {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 12px 14px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .nl-cat:hover { border-color: rgba(245,166,35,0.4); }
+  .nl-cat.active {
+    background: linear-gradient(135deg, rgba(245,166,35,0.18), rgba(255,107,107,0.12));
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+  .nl-field { margin-bottom: 12px; }
+  .nl-label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .nl-input { width: 100%; }
+  .nl-mini-preview {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(135deg, rgba(74,222,128,0.08), rgba(245,166,35,0.05));
+    border: 1px solid rgba(74,222,128,0.3); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 12px;
+  }
+  .nl-mini-preview img {
+    width: 56px; height: 56px; object-fit: cover;
+    border-radius: 8px; flex-shrink: 0;
+    background: var(--panel-2);
+  }
+  .nl-mini-preview-body { flex: 1; min-width: 0; }
+  .nl-mini-preview-title {
+    font-size: 13px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .nl-mini-preview-sub {
+    font-size: 11px; color: #4ade80; margin-top: 2px; font-weight: 600;
+  }
   .figma-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     overflow: hidden; cursor: pointer; position: relative;
@@ -726,6 +822,31 @@
   }
 
   /* ===== 레인톡 광고소재 ===== */
+  .rt-pin-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 700px) { .rt-pin-row { grid-template-columns: 1fr; } }
+  .rt-pin {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .rt-pin:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .rt-pin-icon { font-size: 22px; flex-shrink: 0; }
+  .rt-pin-body { flex: 1; min-width: 0; }
+  .rt-pin-title { font-size: 13px; font-weight: 700; }
+  .rt-pin-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
   .rt-month-bar {
     display: flex; align-items: center; justify-content: center;
     gap: 16px; margin: 0 0 14px;
@@ -1406,6 +1527,22 @@
     <section id="raintalkView" style="display:none">
       <div class="section-header">
         <h2>📢 레인톡 광고소재</h2>
+      </div>
+      <div class="rt-pin-row">
+        <a class="rt-pin" href="https://drive.google.com/drive/u/0/folders/1dX4bZ8GJtZ-3UTbCbmQZ6sjSag00oUid" target="_blank" rel="noopener">
+          <div class="rt-pin-icon">📁</div>
+          <div class="rt-pin-body">
+            <div class="rt-pin-title">소재 완성본 아카이브</div>
+            <div class="rt-pin-sub">Google Drive · 열기 →</div>
+          </div>
+        </a>
+        <a class="rt-pin" href="https://drive.google.com/drive/u/0/folders/1ZJSOKzO2qMSMa_8UOz1Oh6kFen8Bmv9F" target="_blank" rel="noopener">
+          <div class="rt-pin-icon">🎬</div>
+          <div class="rt-pin-body">
+            <div class="rt-pin-title">촬영본 아카이브</div>
+            <div class="rt-pin-sub">Google Drive · 열기 →</div>
+          </div>
+        </a>
       </div>
       <div class="rt-month-bar">
         <button class="nav-btn" id="rtPrevMonthBtn">← 이전달</button>
@@ -4969,19 +5106,29 @@ function renderNotionList() {
 
   function makeNotionCards(arr, emptyMsg) {
     if (arr.length === 0) return `<div class="notion-empty" style="grid-column:1/-1">${emptyMsg}</div>`;
-    return arr.map(item => `
-      <div class="notion-card" onclick="window.openNotionLink('${item.id}')">
-        <div class="notion-card-icon">📒</div>
-        <div class="notion-card-body">
-          <div class="notion-card-title">${escapeHtml(item.title || item.url)}</div>
-          <div class="notion-card-url">${escapeHtml(item.url)}</div>
-          ${item.desc ? `<div class="notion-card-desc">${escapeHtml(item.desc)}</div>` : ''}
-        </div>
-        <div class="notion-card-actions">
-          <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink('${item.id}')">✏️</button>
-          <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink('${item.id}')">🗑</button>
-        </div>
-      </div>`).join('');
+    return arr.map(item => {
+      const host = (() => { try { return new URL(item.url).hostname.replace(/^www\./, ''); } catch { return 'notion'; } })();
+      const isPublic = /\.notion\.site$/i.test(host);
+      const cover = item.thumb
+        ? `<img src="${escapeHtml(item.thumb)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="notion-card-cover-placeholder" style="display:none;">📒</div>`
+        : `<div class="notion-card-cover-placeholder">📒</div>`;
+      return `
+        <div class="notion-card" onclick="window.openNotionLink('${item.id}')">
+          <div class="notion-card-cover">
+            ${cover}
+            <div class="notion-card-cover-badge">${isPublic ? '🔍 미리보기' : '↗ ' + escapeHtml(host)}</div>
+          </div>
+          <div class="notion-card-body">
+            <div class="notion-card-title">${escapeHtml(item.title || item.url)}</div>
+            <div class="notion-card-url">${escapeHtml(host)}</div>
+            ${item.desc ? `<div class="notion-card-desc">${escapeHtml(item.desc)}</div>` : ''}
+          </div>
+          <div class="notion-card-actions">
+            <button class="notion-card-act" onclick="event.stopPropagation();editNotionLink('${item.id}')">✏️</button>
+            <button class="notion-card-act" style="color:var(--danger)" onclick="event.stopPropagation();deleteNotionLink('${item.id}')">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function makeFigmaCards(arr, emptyMsg) {
@@ -5033,26 +5180,48 @@ function openNotionModal(editId = null, defaultCategory = 'notion') {
   const catLabel = { notion: '📒 Notion', figma: '🎨 Figma' };
 
   openModal(`
-    <h3 style="margin:0 0 16px;font-size:16px;">${isEdit ? '✏️ 링크 수정' : '+ 링크 추가'}</h3>
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="cat-chip ${(base.category||'notion')==='notion'?'active':''}" id="nl-cat-notion" data-cat="notion">📒 Notion</button>
-      <button class="cat-chip ${base.category==='figma'?'active':''}" id="nl-cat-figma" data-cat="figma">🎨 Figma</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <div style="font-size:22px;">${isEdit ? '✏️' : '🔗'}</div>
+      <div>
+        <h3 style="margin:0;font-size:17px;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${isEdit ? '링크 수정' : '새 링크 추가'}</h3>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">노션 페이지나 피그마 파일 URL을 붙여넣으면 자동으로 정보를 가져와요</div>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input id="nl-url" class="input" placeholder="URL 붙여넣기…" value="${escapeHtml(base.url)}" style="flex:1;" />
-      <button class="btn" id="nl-fetch" style="white-space:nowrap;padding:0 14px;">자동 인식</button>
+    <div class="nl-cat-row">
+      <button class="nl-cat ${(base.category||'notion')==='notion'?'active':''}" data-cat="notion">
+        <span style="font-size:18px;">📒</span>
+        <span>Notion</span>
+      </button>
+      <button class="nl-cat ${base.category==='figma'?'active':''}" data-cat="figma">
+        <span style="font-size:18px;">🎨</span>
+        <span>Figma</span>
+      </button>
     </div>
-    <div id="nl-preview" style="display:${base.thumb?'flex':'none'};align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px;">
-      <img id="nl-thumb-img" src="${escapeHtml(base.thumb||'')}" style="width:56px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;" />
-      <div style="flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="nl-preview-title">${escapeHtml(base.title||'')}</div>
+    <div class="nl-field">
+      <label class="nl-label">URL</label>
+      <div style="display:flex;gap:8px;">
+        <input id="nl-url" class="input nl-input" placeholder="https://..." value="${escapeHtml(base.url)}" style="flex:1;" />
+        <button class="btn" id="nl-fetch" style="white-space:nowrap;padding:0 14px;font-weight:600;">✨ 자동 인식</button>
+      </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <input id="nl-title" class="input" placeholder="제목 (비워두면 자동 인식)" value="${escapeHtml(base.title||'')}" />
-      <input id="nl-desc" class="input" placeholder="메모 (선택)" value="${escapeHtml(base.desc||'')}" />
+    <div id="nl-preview" class="nl-mini-preview" style="display:${base.thumb?'flex':'none'};">
+      <img id="nl-thumb-img" src="${escapeHtml(base.thumb||'')}" />
+      <div class="nl-mini-preview-body">
+        <div class="nl-mini-preview-title" id="nl-preview-title">${escapeHtml(base.title||'')}</div>
+        <div class="nl-mini-preview-sub">미리보기 ✓</div>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+    <div class="nl-field">
+      <label class="nl-label">제목</label>
+      <input id="nl-title" class="input nl-input" placeholder="비워두면 자동 인식된 제목 사용" value="${escapeHtml(base.title||'')}" />
+    </div>
+    <div class="nl-field">
+      <label class="nl-label">메모 <span style="color:var(--muted);font-weight:400;">(선택)</span></label>
+      <input id="nl-desc" class="input nl-input" placeholder="짧은 설명, 태그 등" value="${escapeHtml(base.desc||'')}" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">
       <button class="btn ghost" data-close>취소</button>
-      <button class="btn-primary" id="nlSaveBtn">${isEdit ? '수정' : '추가'}</button>
+      <button class="btn-primary" id="nlSaveBtn" style="min-width:90px;">${isEdit ? '저장' : '+ 추가'}</button>
     </div>
   `);
 
@@ -5111,8 +5280,45 @@ function openNotionModal(editId = null, defaultCategory = 'notion') {
 
 window.openNotionLink = (id) => {
   const l = getNotionLinks().find(x => x.id === id);
-  if (l) window.open(l.url, '_blank');
+  if (!l) return;
+  if ((l.category || 'notion') === 'figma') { window.open(l.url, '_blank'); return; }
+  openNotionPreview(l);
 };
+
+function openNotionPreview(link) {
+  const host = (() => { try { return new URL(link.url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+  const isPublic = /\.notion\.site$/i.test(host);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'nl-preview-overlay';
+  overlay.innerHTML = `
+    <div class="nl-preview-bar">
+      <div class="nl-preview-title">${escapeHtml(link.title || link.url)}</div>
+      <div class="nl-preview-actions">
+        <a class="btn ghost" href="${escapeHtml(link.url)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:12px;padding:6px 12px;">↗ 새 탭에서 열기</a>
+        <button class="btn" id="nl-preview-close" style="font-size:12px;padding:6px 14px;">닫기</button>
+      </div>
+    </div>
+    ${isPublic
+      ? `<iframe class="nl-preview-frame" src="${escapeHtml(link.url)}" loading="lazy" referrerpolicy="no-referrer"></iframe>`
+      : `<div class="nl-preview-fallback">
+           <div style="font-size:48px;">🔒</div>
+           <div style="font-size:15px;color:var(--text);font-weight:600;">이 페이지는 인라인 미리보기를 지원하지 않아요</div>
+           <div style="font-size:13px;max-width:480px;line-height:1.6;">
+             노션은 <code>notion.so</code> 사설 페이지의 임베드를 차단합니다.<br/>
+             노션에서 <b>공유 → 웹에 게시(Publish to web)</b> 활성화 후 받는 <code>xxx.notion.site/...</code> URL로 다시 추가하면 여기서 바로 볼 수 있어요.
+           </div>
+           <a class="btn-primary" href="${escapeHtml(link.url)}" target="_blank" rel="noopener" style="text-decoration:none;margin-top:8px;">↗ 새 탭에서 열기</a>
+         </div>`
+    }
+  `;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector('#nl-preview-close').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  const esc = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } };
+  document.addEventListener('keydown', esc);
+}
 window.editNotionLink = (id) => openNotionModal(id);
 window.deleteNotionLink = async (id) => {
   if (!confirm('삭제할까요?')) return;
