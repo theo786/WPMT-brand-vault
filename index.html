@@ -1496,9 +1496,9 @@
   <header class="topbar">
     <div class="brand">WIMP MATTER. STUDIO</div>
     <div class="topbar-right">
-      <div class="drive-status" id="driveStatus" title="Drive 미연결 — 클릭하여 연결" style="cursor:pointer;">
-        <span class="dot"></span><span id="driveLabel">Drive 연결 중…</span>
-      </div>
+      <a class="drive-status on" href="https://drive.google.com/drive/folders/1M4i_CzGVfj7wbjrTCcj8mm1ar8zAVESL?usp=drive_link" target="_blank" rel="noopener" title="Google Drive 열기" style="text-decoration:none;">
+        <span class="dot"></span><span>Google Drive</span>
+      </a>
       <span class="sync-dot" id="syncDot"></span>
       <div class="topbar-member" id="topbarMember" title="지금 누구?"></div>
     </div>
@@ -2131,9 +2131,11 @@ function setDriveClientId(id) { localStorage.setItem('wpmt_drive_client_id', id.
 function updateDriveStatus(connected, label) {
   driveConnected = connected;
   const el = $('#driveStatus');
+  if (!el) return; // 상태 표시를 Drive 링크로 교체함 — UI 갱신 불필요
   el.className = 'drive-status' + (connected ? ' on' : '');
   el.title = connected ? 'Drive 연결됨 — 클릭하여 새로고침' : 'Drive 미연결 — 클릭하여 연결';
-  $('#driveLabel').textContent = label || (connected ? 'Drive 연결됨' : 'Drive 미연결');
+  const lbl = $('#driveLabel');
+  if (lbl) lbl.textContent = label || (connected ? 'Drive 연결됨' : 'Drive 미연결');
 }
 
 function isDriveConnected() { return driveConnected; }
@@ -2325,7 +2327,7 @@ async function refreshDriveFiles() {
   }
 }
 
-$('#driveStatus').addEventListener('click', async () => {
+$('#driveStatus')?.addEventListener('click', async () => {
   if (driveConnected) {
     refreshDriveFiles();
     toast('파일 새로고침', 'success');
