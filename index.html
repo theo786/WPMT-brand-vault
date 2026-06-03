@@ -854,7 +854,7 @@
 
   /* ===== 레인톡 광고소재 ===== */
   .rt-pin-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;
     margin-bottom: 14px;
   }
   @media (max-width: 700px) { .rt-pin-row { grid-template-columns: 1fr; } }
@@ -1478,6 +1478,19 @@
 </head>
 <body>
 
+<!-- ========== 페이지 잠금 (6자리) ========== -->
+<div id="appLock" style="position:fixed;inset:0;z-index:99999;background:#0b0b0f;display:flex;align-items:center;justify-content:center;">
+  <div style="text-align:center;max-width:320px;width:90%;">
+    <div style="font-size:40px;margin-bottom:10px;">🔒</div>
+    <div style="font-size:18px;font-weight:700;color:#fff;letter-spacing:1px;margin-bottom:6px;">WIMP MATTER. STUDIO</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px;">6자리 비밀번호를 입력하세요</div>
+    <input id="appLockInput" type="password" inputmode="numeric" maxlength="6" autocomplete="off"
+      style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:10px;font-size:22px;padding:12px;border-radius:10px;border:1px solid #333;background:#16161c;color:#fff;outline:none;" />
+    <div id="appLockErr" style="color:#ef4444;font-size:12px;height:16px;margin-top:8px;"></div>
+    <button id="appLockBtn" style="margin-top:6px;width:100%;padding:12px;border:none;border-radius:10px;background:#f5a623;color:#111;font-weight:700;font-size:15px;cursor:pointer;">잠금 해제</button>
+  </div>
+</div>
+
 <!-- ========== 메인 ========== -->
 <div id="app">
   <header class="topbar">
@@ -1558,6 +1571,13 @@
           <div class="rt-pin-icon">🎬</div>
           <div class="rt-pin-body">
             <div class="rt-pin-title">촬영본 아카이브</div>
+            <div class="rt-pin-sub">Google Drive · 열기 →</div>
+          </div>
+        </a>
+        <a class="rt-pin" href="https://drive.google.com/drive/u/0/folders/1F0CSEnex2tU4d2bIQAJZLewFmVZ7CZTH" target="_blank" rel="noopener">
+          <div class="rt-pin-icon">✂️</div>
+          <div class="rt-pin-body">
+            <div class="rt-pin-title">편집소스 아카이브</div>
             <div class="rt-pin-sub">Google Drive · 열기 →</div>
           </div>
         </a>
@@ -2066,7 +2086,32 @@ async function initApp() {
   setTimeout(() => tryAutoConnectDrive(), 500);
 }
 
-initApp();
+/* ===== 페이지 전체 6자리 비밀번호 게이트 (브라우저 세션당 1회) =====
+   민감 정보(정보 탭 등) 보호용. 통과 전에는 데이터를 불러오지 않음. */
+const PAGE_PASSCODE = '123450'; // 페이지 전체 6자리 비밀번호
+const PAGE_UNLOCK_KEY = 'wpmt_page_unlocked_v1';
+function wpmtUnlockPage() {
+  document.getElementById('appLock')?.remove();
+  initApp();
+}
+(function bootWithGate() {
+  if (sessionStorage.getItem(PAGE_UNLOCK_KEY) === '1') { wpmtUnlockPage(); return; }
+  const input = document.getElementById('appLockInput');
+  const btn = document.getElementById('appLockBtn');
+  const err = document.getElementById('appLockErr');
+  const tryUnlock = () => {
+    if ((input?.value || '').trim() === PAGE_PASSCODE) {
+      sessionStorage.setItem(PAGE_UNLOCK_KEY, '1');
+      wpmtUnlockPage();
+    } else {
+      if (err) err.textContent = '비밀번호가 틀렸습니다.';
+      if (input) { input.value = ''; input.focus(); }
+    }
+  };
+  btn?.addEventListener('click', tryUnlock);
+  input?.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+  input?.focus();
+})();
 
 /* ============================================================
  * Google Drive API (GIS 자동 연결)
@@ -3057,7 +3102,26 @@ async function openFilePreview(f) {
 /* ============================================================
  * 탭 전환
  * ============================================================ */
+/* ===== 수빈 상쾌업무 탭 비밀번호 게이트 (브라우저 세션당 1회) ===== */
+const SANGKWAE_PASSCODE = '3927'; // 수빈 상쾌업무 탭 4자리 비밀번호
+const SANGKWAE_UNLOCK_KEY = 'wpmt_sangkwae_unlocked_v1';
+function isSangkwaeUnlocked() { return sessionStorage.getItem(SANGKWAE_UNLOCK_KEY) === '1'; }
+function requestSangkwaeUnlock() {
+  const input = prompt('🌬 수빈 상쾌업무 — 4자리 비밀번호를 입력하세요');
+  if (input === null) return false; // 취소
+  if (input.trim() === SANGKWAE_PASSCODE) {
+    sessionStorage.setItem(SANGKWAE_UNLOCK_KEY, '1');
+    return true;
+  }
+  alert('비밀번호가 틀렸습니다.');
+  return false;
+}
+
 function switchTab(tab) {
+  // 잠긴 탭이면 비밀번호 확인 후에만 진입 (실패/취소 시 전환 안 함)
+  if (tab === 'sangkwae' && !isSangkwaeUnlocked()) {
+    if (!requestSangkwaeUnlock()) return;
+  }
   $$('.tabs button').forEach(x => x.classList.remove('active'));
   const btn = document.querySelector(`.tabs button[data-tab="${tab}"]`);
   if (btn) btn.classList.add('active');
