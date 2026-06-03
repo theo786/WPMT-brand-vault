@@ -49,36 +49,16 @@
 
   /* === 미션 배너 === */
   .mission-banner {
-    position: relative; overflow: hidden;
-    background: linear-gradient(135deg, rgba(245,166,35,0.09), rgba(255,107,107,0.06), rgba(176,124,255,0.09));
-    border-bottom: 1px solid rgba(245,166,35,0.4);
+    position: relative;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
     padding: 13px 60px 13px 24px;
     text-align: center; cursor: pointer; user-select: none;
-    box-shadow: 0 2px 24px rgba(245,166,35,0.1), inset 0 1px 0 rgba(245,166,35,0.15);
   }
-  .mission-banner::before {
-    content: '';
-    position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(245,166,35,0.1), transparent);
-    animation: missionSweep 4s ease-in-out infinite; pointer-events: none;
-  }
-  .mission-banner::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse 70% 200% at 50% 50%, rgba(245,166,35,0.12) 0%, transparent 65%);
-    animation: missionPulse 3s ease-in-out infinite; pointer-events: none;
-  }
-  @keyframes missionPulse { 0%,100% { opacity: 0.4 } 50% { opacity: 1 } }
-  @keyframes missionSweep { 0% { left: -60% } 100% { left: 160% } }
   .mission-text {
-    font-size: 15px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.45;
-    background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 45%, var(--accent-3) 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    background-size: 200% auto; animation: missionShine 3s linear infinite;
-    filter: drop-shadow(0 0 8px rgba(245,166,35,0.7)) drop-shadow(0 0 20px rgba(255,107,107,0.35));
-    position: relative; z-index: 1;
+    font-size: 15px; font-weight: 800; letter-spacing: 0.02em; line-height: 1.45;
+    color: var(--accent);
   }
-  @keyframes missionShine { 0% { background-position: 0% } 100% { background-position: 200% } }
   .mission-edit-btn {
     position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
     background: none; border: none; color: var(--muted); font-size: 14px;
@@ -1506,7 +1486,7 @@
 
   <!-- 미션 배너 -->
   <div class="mission-banner" id="missionBanner">
-    <div class="mission-text" id="missionText">클릭하여 팀 목표를 입력하세요 ✦</div>
+    <div class="mission-text" id="missionText">고민은 짧게, 배포는 빠르게</div>
     <button class="mission-edit-btn" id="missionEditBtn" title="수정">✏️</button>
   </div>
 
@@ -5679,7 +5659,7 @@ function renderMission() {
   if (!el) return;
   const item = getMissionItem();
   const text = item?.data?.text || localStorage.getItem('wpmt_mission_text') || '';
-  el.textContent = text || '클릭하여 팀 목표를 입력하세요 ✦';
+  el.textContent = text || '고민은 짧게, 배포는 빠르게';
 }
 
 async function saveMission(text) {
