@@ -234,6 +234,7 @@
     display: flex; align-items: center; gap: 6px;
     padding: 6px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--border);
     cursor: pointer; user-select: none;
+    color: var(--text);
   }
   .drive-status:hover { background: var(--panel-3); }
   .drive-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -576,6 +577,135 @@
     display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
   }
   .section-header h2 { margin: 0; font-size: 16px; font-weight: 700; }
+
+  /* ===== 콘텐츠 기획 (인스타 캐러셀) ===== */
+  .cp-grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  .cp-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; cursor: pointer; position: relative;
+    transition: transform 0.18s ease, border-color 0.18s, box-shadow 0.18s;
+  }
+  .cp-card:hover {
+    border-color: rgba(245,166,35,0.6);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+    transform: translateY(-2px);
+  }
+  .cp-thumb {
+    aspect-ratio: 4/5; background: var(--panel-2);
+    position: relative; overflow: hidden;
+  }
+  .cp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cp-thumb-text {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 16px; font-size: 13px; font-weight: 700; text-align: center;
+    word-break: break-word; white-space: pre-wrap; overflow: hidden;
+  }
+  .cp-thumb-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 38px; opacity: 0.4;
+  }
+  .cp-count-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(13,15,20,0.78); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 3px 9px;
+    font-size: 11px; font-weight: 600; color: var(--text);
+  }
+  .cp-card-actions {
+    position: absolute; top: 8px; left: 8px; display: flex; gap: 4px;
+    opacity: 0; transition: opacity 0.15s; z-index: 2;
+  }
+  .cp-card:hover .cp-card-actions { opacity: 1; }
+  .cp-card-actions button {
+    background: rgba(13,15,20,0.78); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1); color: var(--text);
+    border-radius: 7px; padding: 4px 7px; font-size: 12px;
+    cursor: pointer; font-family: inherit;
+  }
+  .cp-card-actions button:hover { border-color: var(--accent); }
+  .cp-card-actions button.cp-del:hover { border-color: var(--danger); color: var(--danger); }
+  .cp-card-body { padding: 10px 12px 12px; }
+  .cp-card-title {
+    font-size: 13px; font-weight: 700; line-height: 1.35;
+    border: 1px dashed transparent; border-radius: 6px; padding: 2px 4px;
+    word-break: break-word; cursor: text;
+    transition: border-color 0.12s, background 0.12s;
+  }
+  .cp-card-title:hover { border-color: var(--border); }
+  .cp-card-title:focus { border-color: var(--accent); border-style: solid; background: var(--panel-2); outline: none; }
+  .cp-card-title:empty::before { content: '제목 입력…'; color: var(--muted); opacity: 0.5; }
+  .cp-new-card {
+    border: 2px dashed var(--border); border-radius: 12px; background: var(--panel-2);
+    aspect-ratio: 4/5.6; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .cp-new-card:hover { border-color: var(--accent); color: var(--accent); background: rgba(245,166,35,0.05); }
+  .cp-new-card .plus { font-size: 30px; line-height: 1; }
+
+  /* 캐러셀 에디터 */
+  .cp-editor-head {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .cp-editor-head input { flex: 1; font-size: 15px; font-weight: 700; }
+  .cp-slide-count { font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cp-strip {
+    display: flex; gap: 14px; overflow-x: auto;
+    padding: 6px 2px 14px; align-items: flex-start;
+  }
+  .cp-slide { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; }
+  .cp-slide-canvas {
+    width: 240px; aspect-ratio: 4/5; border-radius: 10px; overflow: hidden;
+    position: relative; background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .cp-slide-canvas img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cp-slide-num {
+    position: absolute; top: 8px; left: 8px; z-index: 3;
+    background: rgba(13,15,20,0.7); backdrop-filter: blur(6px);
+    border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 700; color: #fff;
+  }
+  .cp-cap {
+    position: absolute; z-index: 2; outline: none; cursor: text;
+    font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  }
+  .cp-cap:empty::before { content: '캡션 입력…'; opacity: 0.5; }
+  .cp-cap.overlay {
+    left: 0; right: 0; bottom: 0; padding: 44px 14px 14px; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,0.78));
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .cp-cap.center {
+    inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 18px; text-align: center; font-size: 15px; font-weight: 700;
+  }
+  .cp-slide-tools { display: flex; gap: 4px; align-items: center; }
+  .cp-slide-tools button {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 5px 8px; font-size: 12px; cursor: pointer; font-family: inherit;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .cp-slide-tools button:hover { border-color: var(--accent); }
+  .cp-slide-tools button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .cp-slide-tools button.cp-slide-del { margin-left: auto; }
+  .cp-slide-tools button.cp-slide-del:hover { border-color: var(--danger); color: var(--danger); }
+  .cp-swatches { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .cp-swatch {
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+    border: 2px solid var(--border); padding: 0;
+  }
+  .cp-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(245,166,35,0.35); }
+  .cp-add-slide {
+    flex: 0 0 120px; aspect-ratio: 4/5; border: 2px dashed var(--border); border-radius: 10px;
+    background: var(--panel-2); color: var(--muted); font-size: 12px; font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .cp-add-slide:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .cp-add-slide:disabled { opacity: 0.35; cursor: not-allowed; }
+  .cp-add-slide .plus { font-size: 24px; line-height: 1; }
 
   /* ===== 상쾌업무 미러 ===== */
   .sk-summary {
@@ -1498,6 +1628,7 @@
       <button data-tab="raintalk">📢 레인톡</button>
       <button data-tab="schedule">📅 스케줄</button>
       <button data-tab="minutes">📋 회의록</button>
+      <button data-tab="content">📑 콘텐츠</button>
       <button data-tab="seminotion" style="display:none;">📝 세미 노션</button>
       <button data-tab="reference">🎨 레퍼런스</button>
       <button data-tab="filevault">📂 파일보관함</button>
@@ -1578,6 +1709,15 @@
         <span style="font-size:12px;color:var(--muted);">멤버별 논의거리를 적으면 업무 탭에 자동 연동됩니다</span>
       </div>
       <div class="agenda-board" id="agendaBoard"></div>
+    </section>
+
+    <!-- 콘텐츠 뷰 — 인스타 캐러셀 기획 -->
+    <section id="contentView" style="display:none">
+      <div class="section-header">
+        <h2>📑 콘텐츠 기획</h2>
+        <button class="btn-primary" id="cpNewBtn">+ 새 기획</button>
+      </div>
+      <div class="cp-grid" id="cpGrid"></div>
     </section>
 
     <!-- 레퍼런스 뷰 — 북마크만 심플하게 -->
@@ -3112,6 +3252,7 @@ function switchTab(tab) {
   $('#tasksView').style.display         = tab === 'tasks'       ? 'block' : 'none';
   $('#raintalkView').style.display      = tab === 'raintalk'    ? 'block' : 'none';
   $('#minutesView').style.display       = tab === 'minutes'     ? 'block' : 'none';
+  $('#contentView').style.display       = tab === 'content'     ? 'block' : 'none';
   $('#seminotionView').style.display    = tab === 'seminotion'  ? 'block' : 'none';
   $('#referenceView').style.display     = tab === 'reference'   ? 'block' : 'none';
   $('#filevaultView').style.display     = tab === 'filevault'   ? 'block' : 'none';
@@ -3125,6 +3266,7 @@ function switchTab(tab) {
   if (tab === 'tasks')       renderTasks();
   if (tab === 'raintalk')    renderRaintalk();
   if (tab === 'minutes')     renderAgendaBoard();
+  if (tab === 'content')     loadAndRenderCpPlans();
   if (tab === 'seminotion')  renderNoteList();
   if (tab === 'notion')      renderNotionList();
   if (tab === 'figma')       renderNotionList();
@@ -3302,6 +3444,10 @@ function applyTabOrder() {
     const btn = tabsEl.querySelector(`button[data-tab="${tabId}"]`);
     if (btn) tabsEl.appendChild(btn);
   });
+  // 저장된 순서에 없는 신규 탭은 맨 앞에 남지 않도록 뒤로 보냄
+  [...tabsEl.querySelectorAll('button[data-tab]')]
+    .filter(b => !cfg.data.order.includes(b.dataset.tab))
+    .forEach(b => tabsEl.appendChild(b));
 }
 
 async function saveTabOrder() {
@@ -3398,6 +3544,345 @@ async function purgeOldTrash() {
   const stale = teamItems.filter(x => x.data?.deleted && x.data.deleted_at < cutoff);
   for (const item of stale) await hardDeleteTeamItem(item.id);
 }
+
+/* ============================================================
+ * 콘텐츠 기획 (인스타 캐러셀) — wpmt_content_plans
+ * ============================================================ */
+const CP_MAX_SLIDES = 10;
+// 텍스트 슬라이드 배경 팔레트 — 브랜드 토큰 색상
+const CP_BG_PALETTE = ['#161922', '#1d2230', '#f5a623', '#ff6b6b', '#b07cff', '#6bd98c', '#ffb450', '#0d0f14'];
+
+let cpPlans = [];        // 그리드용 목록 (slides 제외한 가벼운 행)
+let cpCurrent = null;    // 에디터에 열린 기획 (slides 포함 전체)
+let cpSaveTimer = null;
+let cpUploadSlideId = null;
+
+function cpTextColorFor(bg) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(bg || '');
+  if (!m) return 'var(--text)';
+  const n = parseInt(m[1], 16);
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.55 ? '#181014' : '#ecedf3';
+}
+
+function cpNewSlide() {
+  return { id: uid(), mode: 'text', image: null, caption: '', bg: CP_BG_PALETTE[0] };
+}
+
+// 이미지 리사이즈 (최대폭 maxW, JPEG) — 저장소 부하 방지
+function cpResizeImage(src, maxW = 1080, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('이미지를 읽을 수 없습니다'));
+    img.src = src;
+  });
+}
+function cpFileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = e => resolve(e.target.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// 그리드 카드용 메타 (첫 슬라이드 썸네일 + 텍스트 카드 정보)
+async function cpBuildMeta(slides) {
+  const first = slides[0] || null;
+  let thumb = null;
+  if (first?.mode === 'image' && first.image) {
+    try { thumb = await cpResizeImage(first.image, 320, 0.7); } catch { thumb = null; }
+  }
+  const first_slide = first ? { mode: first.mode, caption: (first.caption || '').slice(0, 80), bg: first.bg } : null;
+  return { thumb, first_slide, slide_count: slides.length };
+}
+
+/* --- CRUD --- */
+async function loadAndRenderCpPlans() {
+  const { data, error } = await supabase
+    .from('wpmt_content_plans')
+    .select('id, title, thumb, first_slide, slide_count, created_at')
+    .order('created_at', { ascending: false });
+  if (error) { console.error('content plans load error', error); toast('콘텐츠 기획 불러오기 실패: ' + error.message, 'error'); return; }
+  cpPlans = data || [];
+  renderCpGrid();
+}
+
+async function createCpPlan() {
+  const slides = [cpNewSlide()];
+  const meta = await cpBuildMeta(slides);
+  const { data, error } = await supabase
+    .from('wpmt_content_plans')
+    .insert({ title: '새 기획', slides, ...meta, created_by: currentUser?.member_id || null })
+    .select().single();
+  if (error) { toast('오류: ' + error.message, 'error'); return; }
+  cpPlans.unshift(data);
+  renderCpGrid();
+  openCpEditor(data.id);
+}
+
+async function duplicateCpPlan(id) {
+  const { data: full, error: e1 } = await supabase
+    .from('wpmt_content_plans').select('*').eq('id', id).single();
+  if (e1 || !full) { toast('복제 실패: ' + (e1?.message || '원본 없음'), 'error'); return; }
+  const { data, error } = await supabase
+    .from('wpmt_content_plans')
+    .insert({
+      title: (full.title || '기획') + ' (복사)',
+      slides: full.slides, thumb: full.thumb, first_slide: full.first_slide,
+      slide_count: full.slide_count, created_by: currentUser?.member_id || null,
+    })
+    .select().single();
+  if (error) { toast('오류: ' + error.message, 'error'); return; }
+  cpPlans.unshift(data);
+  renderCpGrid();
+  toast('기획을 복제했습니다', 'success');
+}
+
+async function deleteCpPlan(id) {
+  const plan = cpPlans.find(p => p.id === id);
+  if (!confirm(`"${plan?.title || '기획'}"을(를) 삭제할까요?`)) return;
+  const { error } = await supabase.from('wpmt_content_plans').delete().eq('id', id);
+  if (error) { toast('오류: ' + error.message, 'error'); return; }
+  cpPlans = cpPlans.filter(p => p.id !== id);
+  renderCpGrid();
+  toast('삭제했습니다', 'success');
+}
+
+async function saveCpTitle(id, title) {
+  const t = (title || '').trim() || '새 기획';
+  const plan = cpPlans.find(p => p.id === id);
+  if (plan && plan.title === t) return;
+  const { error } = await supabase
+    .from('wpmt_content_plans')
+    .update({ title: t, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { toast('오류: ' + error.message, 'error'); return; }
+  if (plan) plan.title = t;
+  if (cpCurrent?.id === id) cpCurrent.title = t;
+}
+
+function cpScheduleSave() {
+  if (!cpCurrent) return;
+  setSync('syncing');
+  clearTimeout(cpSaveTimer);
+  cpSaveTimer = setTimeout(() => cpFlushSave(), 400);
+}
+async function cpFlushSave() {
+  clearTimeout(cpSaveTimer);
+  cpSaveTimer = null;
+  if (!cpCurrent) return;
+  const cur = cpCurrent;
+  const meta = await cpBuildMeta(cur.slides);
+  const { error } = await supabase
+    .from('wpmt_content_plans')
+    .update({
+      title: (cur.title || '').trim() || '새 기획',
+      slides: cur.slides, ...meta,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', cur.id);
+  if (error) { console.error('content plan save error', error); setSync('error'); toast('저장 실패: ' + error.message, 'error'); return; }
+  setSync('synced');
+  const plan = cpPlans.find(p => p.id === cur.id);
+  if (plan) Object.assign(plan, { title: (cur.title || '').trim() || '새 기획', ...meta });
+  if (activeTab === 'content') renderCpGrid();
+}
+
+/* --- 기획 목록 그리드 --- */
+function renderCpGrid() {
+  const grid = $('#cpGrid');
+  if (!grid) return;
+  const cards = cpPlans.map(p => {
+    const fs = p.first_slide;
+    let thumbHtml;
+    if (p.thumb) {
+      thumbHtml = `<img src="${p.thumb}" alt="" />`;
+    } else if (fs && (fs.caption || '').trim()) {
+      thumbHtml = `<div class="cp-thumb-text" style="background:${escapeHtml(fs.bg || CP_BG_PALETTE[0])}; color:${cpTextColorFor(fs.bg)};">${escapeHtml(fs.caption)}</div>`;
+    } else {
+      thumbHtml = `<div class="cp-thumb-empty" ${fs?.bg ? `style="background:${escapeHtml(fs.bg)};"` : ''}>📑</div>`;
+    }
+    return `
+      <div class="cp-card" data-cp-open="${p.id}">
+        <div class="cp-thumb">${thumbHtml}
+          <span class="cp-count-badge">${p.slide_count || 0}/${CP_MAX_SLIDES}</span>
+          <div class="cp-card-actions">
+            <button data-cp-dup="${p.id}" title="복제">⧉</button>
+            <button class="cp-del" data-cp-del="${p.id}" title="삭제">🗑</button>
+          </div>
+        </div>
+        <div class="cp-card-body">
+          <div class="cp-card-title" contenteditable="true" spellcheck="false" data-cp-title="${p.id}">${escapeHtml(p.title || '')}</div>
+        </div>
+      </div>`;
+  }).join('');
+  grid.innerHTML = cards + `
+    <button class="cp-new-card" id="cpNewTile"><span class="plus">＋</span>새 기획</button>`;
+
+  grid.querySelectorAll('[data-cp-open]').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('[data-cp-title], [data-cp-dup], [data-cp-del]')) return;
+      openCpEditor(card.dataset.cpOpen);
+    });
+  });
+  grid.querySelectorAll('[data-cp-dup]').forEach(b => b.addEventListener('click', () => duplicateCpPlan(b.dataset.cpDup)));
+  grid.querySelectorAll('[data-cp-del]').forEach(b => b.addEventListener('click', () => deleteCpPlan(b.dataset.cpDel)));
+  grid.querySelectorAll('[data-cp-title]').forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+    el.addEventListener('blur', () => saveCpTitle(el.dataset.cpTitle, el.innerText));
+  });
+  const tile = $('#cpNewTile');
+  if (tile) tile.addEventListener('click', createCpPlan);
+}
+
+/* --- 캐러셀 에디터 --- */
+async function openCpEditor(id) {
+  const { data, error } = await supabase
+    .from('wpmt_content_plans').select('*').eq('id', id).single();
+  if (error || !data) { toast('기획을 불러올 수 없습니다: ' + (error?.message || ''), 'error'); return; }
+  cpCurrent = { id: data.id, title: data.title || '', slides: Array.isArray(data.slides) ? data.slides : [] };
+  openWideModal(`
+    <div class="cp-editor-head">
+      <input id="cpTitleInput" placeholder="기획 제목" value="${escapeHtml(cpCurrent.title)}" />
+      <span class="cp-slide-count" id="cpSlideCount"></span>
+      <button class="btn ghost" id="cpCloseBtn">✕ 닫기</button>
+    </div>
+    <div class="cp-strip" id="cpStrip"></div>
+    <input type="file" id="cpFileInput" accept="image/*" style="display:none" />
+  `);
+  $('#cpTitleInput').addEventListener('input', () => {
+    cpCurrent.title = $('#cpTitleInput').value;
+    cpScheduleSave();
+  });
+  $('#cpCloseBtn').addEventListener('click', async () => { await cpFlushSave(); cpCurrent = null; closeModal(); });
+  $('#cpFileInput').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !cpCurrent) return;
+    const slide = cpCurrent.slides.find(s => s.id === cpUploadSlideId);
+    if (!slide) return;
+    try {
+      const raw = await cpFileToDataURL(file);
+      slide.image = await cpResizeImage(raw, 1080, 0.85);
+      slide.mode = 'image';
+      renderCpStrip();
+      cpScheduleSave();
+    } catch (err) { toast('이미지 처리 실패: ' + err.message, 'error'); }
+  });
+  renderCpStrip();
+}
+
+function cpSlideCanvasHtml(s, idx) {
+  const num = `<span class="cp-slide-num">${idx + 1}</span>`;
+  if (s.mode === 'image' && s.image) {
+    return `${num}<img src="${s.image}" alt="" />
+      <div class="cp-cap overlay" contenteditable="true" spellcheck="false" data-cp-cap="${s.id}">${escapeHtml(s.caption || '')}</div>`;
+  }
+  const bg = s.bg || CP_BG_PALETTE[0];
+  return `${num}<div class="cp-cap center" contenteditable="true" spellcheck="false" data-cp-cap="${s.id}" style="background:${escapeHtml(bg)}; color:${cpTextColorFor(bg)};">${escapeHtml(s.caption || '')}</div>`;
+}
+
+function renderCpStrip() {
+  if (!cpCurrent) return;
+  const strip = $('#cpStrip');
+  if (!strip) return;
+  const slides = cpCurrent.slides;
+  $('#cpSlideCount').textContent = `${slides.length}/${CP_MAX_SLIDES}장`;
+
+  strip.innerHTML = slides.map((s, i) => {
+    const isImage = s.mode === 'image' && s.image;
+    const swatches = !isImage ? `
+      <div class="cp-swatches">
+        ${CP_BG_PALETTE.map(c => `<button class="cp-swatch ${(s.bg || CP_BG_PALETTE[0]) === c ? 'active' : ''}" style="background:${c};" data-cp-bg="${s.id}" data-color="${c}" title="${c}"></button>`).join('')}
+      </div>` : '';
+    return `
+      <div class="cp-slide" data-sid="${s.id}">
+        <div class="cp-slide-canvas ${isImage ? '' : 'text-mode'}" data-cp-canvas="${s.id}">${cpSlideCanvasHtml(s, i)}</div>
+        <div class="cp-slide-tools">
+          <button data-cp-move="${s.id}" data-dir="-1" title="왼쪽으로" ${i === 0 ? 'disabled' : ''}>◀</button>
+          <button data-cp-move="${s.id}" data-dir="1" title="오른쪽으로" ${i === slides.length - 1 ? 'disabled' : ''}>▶</button>
+          <button data-cp-img="${s.id}" title="${isImage ? '이미지 교체' : '이미지 업로드'}">🖼 ${isImage ? '교체' : '이미지'}</button>
+          ${isImage ? `<button data-cp-noimg="${s.id}" title="이미지 제거 → 텍스트 카드">Aa 텍스트</button>` : ''}
+          <button class="cp-slide-del" data-cp-sdel="${s.id}" title="슬라이드 삭제">🗑</button>
+        </div>
+        ${swatches}
+      </div>`;
+  }).join('') + `
+    <button class="cp-add-slide" id="cpAddSlide" ${slides.length >= CP_MAX_SLIDES ? 'disabled' : ''}>
+      <span class="plus">＋</span>슬라이드<br>(${slides.length}/${CP_MAX_SLIDES})
+    </button>`;
+
+  const find = sid => cpCurrent.slides.find(s => s.id === sid);
+
+  strip.querySelectorAll('[data-cp-cap]').forEach(el => {
+    el.addEventListener('input', () => {
+      const s = find(el.dataset.cpCap);
+      if (s) { s.caption = el.innerText; cpScheduleSave(); }
+    });
+  });
+  strip.querySelectorAll('[data-cp-canvas]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('[data-cp-cap]')) return;
+      el.querySelector('[data-cp-cap]')?.focus();
+    });
+  });
+  strip.querySelectorAll('[data-cp-img]').forEach(b => b.addEventListener('click', () => {
+    cpUploadSlideId = b.dataset.cpImg;
+    $('#cpFileInput').click();
+  }));
+  strip.querySelectorAll('[data-cp-noimg]').forEach(b => b.addEventListener('click', () => {
+    const s = find(b.dataset.cpNoimg);
+    if (!s) return;
+    s.image = null; s.mode = 'text';
+    renderCpStrip(); cpScheduleSave();
+  }));
+  strip.querySelectorAll('[data-cp-bg]').forEach(b => b.addEventListener('click', () => {
+    const s = find(b.dataset.cpBg);
+    if (!s) return;
+    s.bg = b.dataset.color;
+    renderCpStrip(); cpScheduleSave();
+  }));
+  strip.querySelectorAll('[data-cp-move]').forEach(b => b.addEventListener('click', () => {
+    const sid = b.dataset.cpMove, dir = parseInt(b.dataset.dir, 10);
+    const i = cpCurrent.slides.findIndex(s => s.id === sid);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= cpCurrent.slides.length) return;
+    [cpCurrent.slides[i], cpCurrent.slides[j]] = [cpCurrent.slides[j], cpCurrent.slides[i]];
+    renderCpStrip(); cpScheduleSave();
+  }));
+  strip.querySelectorAll('[data-cp-sdel]').forEach(b => b.addEventListener('click', () => {
+    const i = cpCurrent.slides.findIndex(s => s.id === b.dataset.cpSdel);
+    if (i < 0) return;
+    const s = cpCurrent.slides[i];
+    if ((s.caption || '').trim() || s.image) {
+      if (!confirm(`${i + 1}번 슬라이드를 삭제할까요?`)) return;
+    }
+    cpCurrent.slides.splice(i, 1);
+    renderCpStrip(); cpScheduleSave();
+  }));
+  const addBtn = $('#cpAddSlide');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    if (cpCurrent.slides.length >= CP_MAX_SLIDES) return;
+    cpCurrent.slides.push(cpNewSlide());
+    renderCpStrip(); cpScheduleSave();
+    strip.scrollTo({ left: strip.scrollWidth, behavior: 'smooth' });
+  });
+}
+
+$('#cpNewBtn').addEventListener('click', createCpPlan);
+// 모달 배경 클릭으로 닫힐 때도 미저장분 플러시
+$('#modalBg').addEventListener('click', e => {
+  if (e.target === $('#modalBg') && cpCurrent) { cpFlushSave(); cpCurrent = null; }
+});
 
 /* ============================================================
  * 업무 보드 렌더
