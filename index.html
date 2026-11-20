@@ -2215,7 +2215,7 @@ async function initApp() {
 
 /* 비밀번호 잠금 제거 (2026-11-20) — 바로 시작 */
 function wpmtUnlockPage() { initApp(); }
-wpmtUnlockPage();
+setTimeout(wpmtUnlockPage, 0); // 모듈 전체 로드 후 시작 (변수 초기화 전 실행 오류 방지)
 
 /* ============================================================
  * Google Drive API (GIS 자동 연결)
