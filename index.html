@@ -2874,6 +2874,7 @@ function bindCardEvents(card) {
 function renderRecent() {
   const list = bookmarks.slice(0, 3);
   const el = $('#recentList');
+  if (!el) return;
   if (list.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = '<div style="font-size:11px; margin-top:8px; opacity:0.7">최근 추가</div>' + list.map(b => `
     <div class="row"><span class="host">${escapeHtml(hostOf(b.url))}</span><span class="ttl">${escapeHtml(b.name)}</span></div>
